@@ -15,12 +15,12 @@ window.HOTEL_CONFIG = {
   timezone: "Africa/Douala",
   apiBaseUrl: "/api",
   firebase: {
-    apiKey: "REPLACE_WITH_FIREBASE_API_KEY",
-    authDomain: "REPLACE_WITH_PROJECT.firebaseapp.com",
-    projectId: "REPLACE_WITH_PROJECT_ID",
-    storageBucket: "REPLACE_WITH_PROJECT.appspot.com",
-    messagingSenderId: "REPLACE_WITH_SENDER_ID",
-    appId: "REPLACE_WITH_APP_ID",
+    apiKey: "AIzaSyB4zLVvw6SVuFa7TxU4Ee7Ic7381K6Kz0s",
+    authDomain: "swiftchain-827f2.firebaseapp.com",
+    projectId: "swiftchain-827f2",
+    storageBucket: "swiftchain-827f2.firebasestorage.app",
+    messagingSenderId: "709059558659",
+    appId: "1:709059558659:web:7c3eb1d6ddba07bb14bd36",
   },
   paymentProviders: ["mtn_momo", "orange_money"],
 };
