@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Overview · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Finance Overview" data-roles="super_admin,manager,accountant">
+  <div id="admin-content">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Room Revenue</div><div class="stat-value" id="revRoom">–</div></div>
+      <div class="stat-card"><div class="stat-label">Restaurant Revenue</div><div class="stat-value" id="revRestaurant">–</div></div>
+      <div class="stat-card"><div class="stat-label">Other Services</div><div class="stat-value" id="revOther">–</div></div>
+      <div class="stat-card"><div class="stat-label">Expenses (MTD)</div><div class="stat-value" id="expMonth">–</div></div>
+      <div class="stat-card"><div class="stat-label">ADR</div><div class="stat-value" id="statAdr">–</div></div>
+      <div class="stat-card"><div class="stat-label">RevPAR</div><div class="stat-value" id="statRevpar">–</div></div>
+      <div class="stat-card"><div class="stat-label">Outstanding Balances</div><div class="stat-value" id="statOutstanding2">–</div></div>
+      <div class="stat-card"><div class="stat-label">Net (Revenue − Expenses)</div><div class="stat-value" id="statNet">–</div></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <a href="/admin/invoices.html" class="panel" style="padding:20px"><h3>Invoices →</h3><p class="muted">View and export all guest invoices.</p></a>
+      <a href="/admin/expenses.html" class="panel" style="padding:20px"><h3>Expenses →</h3><p class="muted">Track operating costs by category.</p></a>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+async function load() {
+  const { collection, onSnapshot } = window.fb;
+  const db = window.firebaseDb;
+  const now = new Date();
+
+  let roomRev = 0, restRev = 0, otherRev = 0;
+  onSnapshot(collection(db, "folioItems"), (snap) => {
+    roomRev = restRev = otherRev = 0;
+    snap.docs.forEach((d) => {
+      const it = d.data();
+      const amt = Number(it.amount || 0);
+      if (it.category === "room") roomRev += amt;
+      else if (it.category === "restaurant") restRev += amt;
+      else otherRev += amt;
+    });
+    document.getElementById("revRoom").textContent = Utils.formatMoney(roomRev);
+    document.getElementById("revRestaurant").textContent = Utils.formatMoney(restRev);
+    document.getElementById("revOther").textContent = Utils.formatMoney(otherRev);
+    updateNet();
+  });
+
+  let expMonth = 0;
+  onSnapshot(collection(db, "expenses"), (snap) => {
+    expMonth = snap.docs.reduce((sum, d) => {
+      const e = d.data();
+      const created = e.createdAt?.toDate ? e.createdAt.toDate() : new Date(e.createdAt);
+      return (created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()) ? sum + Number(e.amount || 0) : sum;
+    }, 0);
+    document.getElementById("expMonth").textContent = Utils.formatMoney(expMonth);
+    updateNet();
+  });
+
+  onSnapshot(collection(db, "invoices"), (snap) => {
+    const outstanding = snap.docs.reduce((s, d) => s + Number(d.data().balance || 0), 0);
+    document.getElementById("statOutstanding2").textContent = Utils.formatMoney(outstanding);
+  });
+
+  onSnapshot(collection(db, "rooms"), (roomSnap) => {
+    const totalRooms = roomSnap.size || 1;
+    onSnapshot(collection(db, "reservations"), (resSnap) => {
+      const checkedIn = resSnap.docs.map((d) => d.data()).filter((r) => r.status === "Checked In");
+      const adr = checkedIn.length ? checkedIn.reduce((s, r) => s + Number(r.rate || 0), 0) / checkedIn.length : 0;
+      document.getElementById("statAdr").textContent = Utils.formatMoney(adr);
+      document.getElementById("statRevpar").textContent = Utils.formatMoney((adr * checkedIn.length) / totalRooms);
+    });
+  });
+
+  function updateNet() {
+    document.getElementById("statNet").textContent = Utils.formatMoney(roomRev + restRev + otherRev - expMonth);
+  }
+}
+</script>
+</body>
+</html>

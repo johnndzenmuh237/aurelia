@@ -1,0 +1,45 @@
+/* Ticker bar — thin strip under the header, auto-scrolls right-to-left,
+   pauses on hover/focus, respects reduced-motion. */
+.ticker-bar{
+  background:var(--forest-2); color:#EAF2EE; overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.08); position:relative;
+}
+.ticker-track{
+  display:flex; width:max-content; gap:0;
+  animation:ticker-scroll 32s linear infinite;
+}
+.ticker-bar:hover .ticker-track,
+.ticker-bar:focus-within .ticker-track{ animation-play-state:paused; }
+.ticker-item{
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+  padding:9px 28px; font-size:.8rem; font-weight:500; letter-spacing:.01em;
+}
+.ticker-item .dot{width:5px; height:5px; border-radius:50%; background:var(--gold); flex:0 0 auto}
+@keyframes ticker-scroll{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce){
+  .ticker-track{ animation:none; overflow-x:auto; }
+}
+
+/* Hero animated image — a softly floating photo badge layered over the
+   hero, gives the header a bit of life without being distracting. */
+.hero-float-img{
+  position:absolute; right:6%; bottom:-40px; width:230px; height:290px;
+  border-radius:var(--radius-l); overflow:hidden; box-shadow:var(--shadow-l);
+  border:4px solid rgba(255,255,255,.85);
+  animation:hero-float 6s ease-in-out infinite;
+  z-index:2;
+}
+.hero-float-img img{ width:100%; height:100%; object-fit:cover; display:block }
+@keyframes hero-float{
+  0%, 100%{ transform:translateY(0) rotate(-2deg); }
+  50%{ transform:translateY(-16px) rotate(1deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-float-img{ animation:none; }
+}
+@media (max-width: 900px){
+  .hero-float-img{ display:none; } /* avoid crowding the stacked mobile search card */
+}

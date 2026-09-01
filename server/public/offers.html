@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offers · Aurelia Hotel</title>
+<meta name="description" content="Current promotions and special rates at Aurelia Hotel, pulled live from our booking system.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head><body>
+<div id="app-header"></div>
+<section class="section" style="padding-top:60px">
+  <div class="container">
+    <span class="eyebrow">Offers</span>
+    <h1>Current promotions</h1>
+    <div class="grid grid-3" id="offersGrid" style="margin-top:20px"><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:180px"></div></div>
+  </div>
+</section>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+function load() {
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "promotions"), where("active", "==", true)), (snap) => {
+    const promos = snap.docs.map((d) => d.data());
+    document.getElementById("offersGrid").innerHTML = promos.length ? promos.map((p) => `
+      <div class="card" style="padding:22px">
+        <span class="eyebrow">Save ${p.discountPercent}%</span>
+        <h3>${p.name}</h3>
+        <p class="muted">Valid ${Utils.formatDate(p.startDate)} – ${Utils.formatDate(p.endDate)}</p>
+        <a class="btn btn-outline btn-sm" href="/booking.html">Book This Offer</a>
+      </div>`).join("") : `<div class="empty-state" style="grid-column:1/-1">No active promotions right now — check back soon, or book direct for our standard best rate.</div>`;
+  });
+}
+</script>
+</body></html>

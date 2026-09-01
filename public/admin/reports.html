@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Reports" data-roles="super_admin,manager,accountant">
+  <div id="admin-content">
+    <div class="grid grid-3" id="reportGrid"></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+const REPORTS = [
+  { key: "revenue", title: "Revenue Report", desc: "Daily / monthly revenue by department and source." },
+  { key: "occupancy", title: "Occupancy Report", desc: "Occupancy, ADR and RevPAR over a date range." },
+  { key: "guests", title: "Guest Report", desc: "Arrivals, departures, repeat guests, cancellations." },
+  { key: "employees", title: "Employee Report", desc: "Attendance, lateness and absence summary." },
+  { key: "finance", title: "Financial Report", desc: "Expenses, payments, refunds and profit/loss." },
+];
+document.getElementById("reportGrid").innerHTML = REPORTS.map((r) => `
+  <div class="panel" style="padding:20px">
+    <h3>${r.title}</h3><p class="muted">${r.desc}</p>
+    <div style="display:flex; gap:8px; margin-top:10px">
+      <button class="btn btn-sm btn-outline" data-key="${r.key}" data-format="csv">Export CSV</button>
+      <button class="btn btn-sm btn-outline" data-key="${r.key}" data-format="pdf">Export PDF</button>
+    </div>
+  </div>`).join("");
+
+document.querySelectorAll("[data-key]").forEach((b) => b.addEventListener("click", async () => {
+  try {
+    const res = await Utils.api(`/reports/${b.dataset.key}?format=${b.dataset.format}`);
+    Utils.toast(res?.message || "Report generated — check your downloads", "success");
+  } catch (err) { Utils.toast(err.message, "error"); }
+}));
+</script>
+</body>
+</html>

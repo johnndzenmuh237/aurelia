@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In · Aurelia Hotel</title>
+<meta name="description" content="Sign in to your Aurelia Hotel guest, employee or admin account.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="auth-shell">
+  <div class="auth-card card">
+    <h1 style="font-size:1.8rem">Welcome back</h1>
+    <p class="muted">Sign in to manage your stay, your shifts, or the property.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" name="email" required autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" name="password" required autocomplete="current-password"></div>
+      <div class="form-error hidden" id="loginError"></div>
+      <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+    </form>
+    <p class="muted" style="margin-top:16px; text-align:center">No account yet? <a href="/register.html" style="color:var(--forest); font-weight:600">Create one</a></p>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const errorBox = document.getElementById("loginError");
+  errorBox.classList.add("hidden");
+  try {
+    await Auth.login(fd.get("email"), fd.get("password"));
+    const profile = await new Promise((resolve) => Auth.onReady((u, p) => resolve(p)));
+    const dest = { super_admin: "/admin/dashboard.html", manager: "/admin/dashboard.html",
+      front_desk: "/admin/dashboard.html", housekeeping: "/admin/housekeeping.html",
+      maintenance: "/admin/maintenance.html", restaurant: "/admin/restaurant/pos.html",
+      hr: "/admin/employees.html", accountant: "/admin/finance.html",
+      employee: "/employee/dashboard.html", guest: "/guest/dashboard.html" }[profile?.role] || "/guest/dashboard.html";
+    window.location.href = Utils.qs("next") || dest;
+  } catch (err) {
+    errorBox.textContent = "Incorrect email or password. Please try again.";
+    errorBox.classList.remove("hidden");
+  }
+});
+</script>
+</body>
+</html>

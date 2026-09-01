@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Tasks · Aurelia Staff</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/employee.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="guest-shell">
+  <div class="guest-tabs" id="emp-tabs"></div>
+  <h1 style="font-size:1.6rem">My Tasks</h1>
+  
+    <div class="panel"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Room</th><th>Task</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+      <tbody id="taskBody"><tr><td colspan="5"><div class="empty-state">Loading…</div></td></tr></tbody>
+    </table></div></div>
+
+</main>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/employee-layout.js"></script>
+
+<script>
+Auth.onReady((user, profile) => {
+  if (!user) return;
+  const empId = profile?.employeeId || user.uid;
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "housekeepingTasks"), where("assignedTo", "==", empId)), (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const body = document.getElementById("taskBody");
+    body.innerHTML = rows.length ? rows.map((t) => `
+      <tr><td>${t.room}</td><td>${t.taskType}</td><td>${t.priority||"Normal"}</td><td>${Utils.statusChip(t.status||"pending").outerHTML}</td>
+      <td>${t.status !== "completed" ? `<button class="btn btn-sm btn-primary" data-id="${t.id}">Mark Done</button>` : ""}</td></tr>`).join("")
+      : `<tr><td colspan="5"><div class="empty-state">No tasks assigned right now.</div></td></tr>`;
+    body.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("click", async () => {
+      try { await Utils.api("/housekeeping/complete", { method: "POST", body: { taskId: b.dataset.id } }); Utils.toast("Task completed", "success"); }
+      catch (err) { Utils.toast(err.message, "error"); }
+    }));
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery · Aurelia Hotel</title>
+<meta name="description" content="A look around Aurelia Hotel — rooms, restaurant and grounds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .gal-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .gal-item{aspect-ratio:1; border-radius:14px; overflow:hidden; position:relative}
+  .gal-item img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s ease}
+  .gal-item:hover img{transform:scale(1.08)}
+  @media(max-width:700px){.gal-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head><body>
+<div id="app-header"></div>
+<section class="section" style="padding-top:60px">
+  <div class="container">
+    <span class="eyebrow">Gallery</span>
+    <h1>A look around</h1>
+    <p class="muted" style="max-width:520px; margin-bottom:24px">Placeholder photography below — swap the src attributes for real photos in /public/assets/images before launch.</p>
+    <div class="gal-grid" id="galGrid"></div>
+  </div>
+</section>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+const seeds = ["lobby","suite","pool","restaurant","bar","exterior","spa","room-deluxe","garden"];
+document.getElementById("galGrid").innerHTML = seeds.map((s) =>
+  `<div class="gal-item"><img src="https://picsum.photos/seed/aurelia-gallery-${s}/500/500" alt="Aurelia Hotel — ${s.replace("-", " ")}" loading="lazy"></div>`
+).join("");
+</script>
+</body></html>

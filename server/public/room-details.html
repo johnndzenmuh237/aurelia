@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">Room Details · Aurelia Hotel</title>
+<meta name="description" id="pageDesc" content="View room and apartment details, amenities and pricing at Aurelia Hotel, Douala.">
+<link rel="canonical" id="canonicalLink" href="https://aureliahotel.com/room-details.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/rooms.css">
+<script type="application/ld+json" id="productSchema"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<nav class="container breadcrumb" aria-label="Breadcrumb" style="padding-top:20px; font-size:.82rem; color:var(--slate)">
+  <a href="/index.html">Home</a> / <a href="/rooms.html">Rooms &amp; Apartments</a> / <span id="crumbName">Loading…</span>
+</nav>
+<section class="section" style="padding-top:16px">
+  <div class="container" id="roomDetail">
+    <div class="skeleton" style="height:360px; border-radius:18px"></div>
+  </div>
+</section>
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+const typeId = Utils.qs("type");
+const checkIn = Utils.qs("checkIn") || "";
+const checkOut = Utils.qs("checkOut") || "";
+
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+
+function amenityList(t) {
+  const base = ["Daily housekeeping", "Free Wi-Fi", "Flat-screen TV", "Private bathroom", "24/7 front desk"];
+  const cooling = t.hasAC ? ["Air conditioning"] : t.hasFan ? ["Ceiling fan"] : [];
+  const apt = t.category === "apartment" ? ["Kitchenette", "Living/dining area", "Weekly housekeeping option"] : [];
+  return [...cooling, ...base, ...apt];
+}
+
+function rateCardHtml(t) {
+  const weekly = t.weeklyDiscountPercent ? Math.round(t.basePrice * (1 - t.weeklyDiscountPercent / 100)) : null;
+  const monthly = t.monthlyDiscountPercent ? Math.round(t.basePrice * (1 - t.monthlyDiscountPercent / 100)) : null;
+  return `
+    <table class="rate-card">
+      <thead><tr><th>Stay length</th><th>Rate / night</th><th>Est. total</th></tr></thead>
+      <tbody>
+        <tr><td>1 night</td><td>${Utils.formatMoney(t.basePrice)}</td><td>${Utils.formatMoney(t.basePrice)}</td></tr>
+        <tr><td>1 week (7 nights)${t.weeklyDiscountPercent ? ` <span class="save-tag">save ${t.weeklyDiscountPercent}%</span>` : ""}</td>
+            <td>${weekly ? Utils.formatMoney(weekly) : Utils.formatMoney(t.basePrice)}</td>
+            <td>${Utils.formatMoney((weekly || t.basePrice) * 7)}</td></tr>
+        <tr><td>1 month (28 nights)${t.monthlyDiscountPercent ? ` <span class="save-tag">save ${t.monthlyDiscountPercent}%</span>` : ""}</td>
+            <td>${monthly ? Utils.formatMoney(monthly) : Utils.formatMoney(t.basePrice)}</td>
+            <td>${Utils.formatMoney((monthly || t.basePrice) * 28)}</td></tr>
+      </tbody>
+    </table>`;
+}
+
+async function load() {
+  if (!typeId) {
+    document.getElementById("roomDetail").innerHTML = `<div class="empty-state">No room selected. <a href="/rooms.html">Browse rooms &amp; apartments →</a></div>`;
+    return;
+  }
+  const { doc, onSnapshot } = window.fb;
+  const ref = doc(window.firebaseDb, "roomTypes", typeId);
+  onSnapshot(ref, (snap) => {
+    if (!snap.exists()) {
+      document.getElementById("roomDetail").innerHTML = `<div class="empty-state">Room type not found.</div>`;
+      return;
+    }
+    const t = snap.data();
+    const categoryLabel = t.category === "apartment" ? "Apartment" : "Room";
+    document.title = `${t.name} · Aurelia Hotel`;
+    document.getElementById("pageDesc").setAttribute("content", `${t.name} at Aurelia Hotel, Douala — ${t.description || ""} From ${t.basePrice} FCFA/night.`.slice(0, 155));
+    document.getElementById("canonicalLink").href = `https://aureliahotel.com/room-details.html?type=${typeId}`;
+    document.getElementById("crumbName").textContent = t.name;
+
+    document.getElementById("productSchema").textContent = JSON.stringify({
+      "@context": "https://schema.org", "@type": "Product", "name": t.name,
+      "description": t.description || "", "image": t.photoUrl || "",
+      "offers": { "@type": "Offer", "price": t.basePrice, "priceCurrency": "XAF", "availability": "https://schema.org/InStock" },
+    });
+
+    document.getElementById("roomDetail").innerHTML = `
+      <div class="grid" style="grid-template-columns:1.4fr 1fr; gap:40px; align-items:start">
+        <div>
+          <div class="room-hero-media"><img src="${t.photoUrl || `https://picsum.photos/seed/room-${typeId}/900/600`}" alt="${t.name} at Aurelia Hotel" loading="eager"></div>
+          <span class="eyebrow">${categoryLabel} · ${t.bedType || ""}</span>
+          <h1>${t.name}</h1>
+          <p>${t.description || "A comfortable, well-appointed space designed for a great stay."}</p>
+
+          <h2 style="font-size:1.2rem; margin-top:28px">What's included</h2>
+          <div>
+            ${amenityList(t).map((a) => `<span class="amenity-pill">${a}</span>`).join("")}
+          </div>
+
+          <h2 style="font-size:1.2rem; margin-top:28px">Pricing — the longer you stay, the more you save</h2>
+          ${rateCardHtml(t)}
+          <p class="form-note">Final total (taxes included) is calculated automatically for your exact dates on the next step.</p>
+        </div>
+        <div class="card" style="padding:24px; position:sticky; top:96px">
+          <div class="room-card-price">${Utils.formatMoney(t.basePrice)}<span class="muted"> / night</span></div>
+          <p class="muted" style="margin-bottom:8px">Sleeps up to ${t.maxAdults || 2} adults${t.maxChildren ? ` + ${t.maxChildren} children` : ""}</p>
+          <p class="muted" style="margin-bottom:16px">${t.hasAC ? "❄️ Air conditioned" : t.hasFan ? "🌀 Ceiling fan" : ""}</p>
+          <a class="btn btn-primary btn-block" href="/booking.html?type=${typeId}&checkIn=${checkIn}&checkOut=${checkOut}">Book This ${categoryLabel}</a>
+          <a class="btn btn-outline btn-block" style="margin-top:8px" href="/rooms.html">← Compare other options</a>
+        </div>
+      </div>`;
+  });
+}
+</script>
+</body>
+</html>
