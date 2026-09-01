@@ -1,5 +1,0 @@
-/* Employee portal reuses guest.css layout classes; this file is kept
-   separate so device-specific tweaks (e.g. larger tap targets for
-   housekeeping/maintenance staff using phones) can be added without
-   touching the guest portal. */
-.guest-shell .btn{min-height:44px}

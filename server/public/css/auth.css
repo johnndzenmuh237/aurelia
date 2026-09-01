@@ -1,3 +1,0 @@
-.auth-shell{min-height:calc(100vh - var(--header-h) - 260px); display:flex; align-items:center; justify-content:center; padding:60px 20px}
-.auth-card{width:100%; max-width:420px; padding:36px}
-@media (max-width: 480px){ .auth-card{padding:26px} }

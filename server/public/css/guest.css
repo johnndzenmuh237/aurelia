@@ -1,4 +1,0 @@
-.guest-shell{max-width:960px; margin:0 auto; padding:32px 24px}
-.guest-tabs{display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap}
-.guest-tabs a{padding:9px 16px; border-radius:999px; font-size:.85rem; font-weight:600; border:1px solid var(--line); color:var(--ink)}
-.guest-tabs a.active{background:var(--forest); color:#fff; border-color:var(--forest)}

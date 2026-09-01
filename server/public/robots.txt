@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /guest/
-Disallow: /employee/
-Disallow: /login.html
-Disallow: /register.html
-
-Sitemap: https://aureliahotel.com/sitemap.xml

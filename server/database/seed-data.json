@@ -1,6 +1,0 @@
-{
-  "note": "Static reference data used by database/seed.js for names/categories. The actual demo records (100 rooms, 200 guests, 100 reservations, etc.) are generated programmatically by seed.js rather than hard-coded here, so quantities match spec §82 exactly and re-seeding never goes stale.",
-  "roomTypeNames": ["Standard Room", "Deluxe Room", "Executive Room", "Suite", "Family Room"],
-  "departments": ["Front Desk", "Housekeeping", "Restaurant", "Maintenance", "Finance", "HR", "Management"],
-  "expenseCategories": ["Electricity", "Water", "Internet", "Salaries", "Repairs", "Supplies", "Marketing"]
-}
