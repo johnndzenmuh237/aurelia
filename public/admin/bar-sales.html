@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Record Bar Sale · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Record Bar Sale" data-roles="super_admin,manager,restaurant">
+  <div id="admin-content">
+    <div class="panel" style="max-width:560px">
+      <div class="panel-body">
+        <form id="sellForm">
+          <div class="field"><label>Category</label>
+            <select id="catSelect" required><option value="">Choose a category…</option><option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option></select>
+          </div>
+          <div class="field"><label>Brand / Type</label>
+            <select id="brandSelect" required><option value="">Choose a category first…</option></select>
+          </div>
+          <div id="stockInfo" class="form-note" style="margin-bottom:12px"></div>
+          <div class="field"><label>Quantity Sold</label><input type="number" name="quantitySold" min="1" required></div>
+          <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:16px">
+            <span>Sale Total</span><span id="saleTotal">0 FCFA</span>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Record Sale</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Recent Sales</h3></div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Brand</th><th>Category</th><th>Qty</th><th>Total</th><th>Sold By</th><th>Time</th></tr></thead>
+        <tbody id="salesBody"><tr><td colspan="6"><div class="empty-state">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+let allItems = [];
+let selectedItem = null;
+
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+
+function sub() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "barInventory"), (snap) => {
+    allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    refreshBrandOptions();
+  });
+  Utils.pollCollection("barSales", (rows) => {
+    rows = rows.sort((a, b) => (b.createdAt?._seconds || 0) - (a.createdAt?._seconds || 0)).slice(0, 30);
+    document.getElementById("salesBody").innerHTML = rows.length ? rows.map((s) => `
+      <tr><td>${s.brand}</td><td>${s.category}</td><td>${s.quantitySold} ${s.unit}(s)</td>
+      <td>${Utils.formatMoney(s.total)}</td><td>${s.soldByName || "Staff"}</td><td>${Utils.formatDateTime(s.createdAt?._seconds ? new Date(s.createdAt._seconds * 1000) : s.createdAt)}</td></tr>`).join("")
+      : `<tr><td colspan="6"><div class="empty-state">No sales recorded yet.</div></td></tr>`;
+  });
+}
+
+function refreshBrandOptions() {
+  const cat = document.getElementById("catSelect").value;
+  const brandSelect = document.getElementById("brandSelect");
+  const items = allItems.filter((i) => i.category === cat);
+  brandSelect.innerHTML = items.length
+    ? `<option value="">Choose a brand…</option>` + items.map((i) => `<option value="${i.id}">${i.brand} (${i.quantity} ${i.unit}(s) left)</option>`).join("")
+    : `<option value="">No drinks in this category yet</option>`;
+  selectedItem = null;
+  updateStockInfo();
+}
+document.getElementById("catSelect").addEventListener("change", refreshBrandOptions);
+document.getElementById("brandSelect").addEventListener("change", (e) => {
+  selectedItem = allItems.find((i) => i.id === e.target.value) || null;
+  updateStockInfo();
+  updateTotal();
+});
+document.querySelector('[name="quantitySold"]').addEventListener("input", updateTotal);
+
+function updateStockInfo() {
+  const info = document.getElementById("stockInfo");
+  info.textContent = selectedItem ? `${selectedItem.quantity} ${selectedItem.unit}(s) remaining · ${Utils.formatMoney(selectedItem.unitPrice)} each` : "";
+}
+function updateTotal() {
+  const qty = Number(document.querySelector('[name="quantitySold"]').value || 0);
+  document.getElementById("saleTotal").textContent = Utils.formatMoney(selectedItem ? qty * selectedItem.unitPrice : 0);
+}
+
+document.getElementById("sellForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!selectedItem) return Utils.toast("Choose a brand first", "error");
+  const quantitySold = Number(document.querySelector('[name="quantitySold"]').value);
+  try {
+    const res = await Utils.api("/bar/sell", { method: "POST", body: { itemId: selectedItem.id, quantitySold } });
+    Utils.toast(`Sale recorded — ${Utils.formatMoney(res.total)}`, "success");
+    e.target.reset();
+    document.getElementById("brandSelect").innerHTML = `<option value="">Choose a category first…</option>`;
+    selectedItem = null; updateStockInfo(); updateTotal();
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+</body>
+</html>

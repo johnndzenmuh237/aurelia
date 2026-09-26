@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arrivals Today · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Arrivals Today" data-roles="super_admin,manager,front_desk">
+  <div id="admin-content">
+    <div class="panel">
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Guest</th><th>Reservation</th><th>Room</th><th>Payment</th><th>VIP</th><th>Special Request</th><th></th></tr></thead>
+        <tbody id="arrBody">${""}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.getElementById("arrBody").innerHTML = Utils.skeletonRows(4, 7);
+const todayStr = new Date().toISOString().slice(0, 10);
+Utils.pollCollection("reservations", (all) => {
+  const rows = all.filter((r) => r.checkIn === todayStr);
+  const body = document.getElementById("arrBody");
+    body.innerHTML = rows.length ? rows.map((r) => `
+      <tr>
+        <td>${r.guestName || "—"}</td>
+        <td style="font-family:var(--font-mono)">${r.reservationCode || r.id}</td>
+        <td>${Utils.formatRoomLabel(r.room) || "Unassigned"}</td>
+        <td>${Utils.statusChip(r.paymentStatus || "unpaid").outerHTML}</td>
+        <td>${r.vip ? "★ VIP" : "—"}</td>
+        <td>${r.specialRequests || "—"}</td>
+        <td>${r.status !== "Checked In" ? `<button class="btn btn-sm btn-primary" data-id="${r.id}">Check In</button>` : Utils.statusChip("Checked In").outerHTML}</td>
+      </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No arrivals scheduled for today.</div></td></tr>`;
+    body.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("click", async () => {
+      try { await Utils.api("/checkin", { method: "POST", body: { reservationId: b.dataset.id } }); Utils.toast("Checked in", "success"); }
+      catch (err) { Utils.toast(err.message, "error"); }
+    }));
+  });
+</script>
+</body>
+</html>

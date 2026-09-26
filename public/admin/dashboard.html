@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manager Dashboard · Aurelia PMS Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Manager Dashboard" data-roles="super_admin,manager,front_desk,accountant">
+  <div id="admin-content">
+
+    <div class="section-head" style="text-align:left; margin:0 0 10px">
+      <h3 style="margin:0">Business Overview</h3>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value" id="statTotalRevenue">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Room Revenue</div><div class="stat-value" id="statRoomRev">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Apartment Revenue</div><div class="stat-value" id="statAptRev">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Restaurant Revenue</div><div class="stat-value" id="statRestRev">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Bar Revenue</div><div class="stat-value" id="statBarRev">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Food Delivery Revenue</div><div class="stat-value" id="statDeliveryRev">–</div></div>
+      <div class="stat-card stat-warn"><div class="stat-label">Pending Payments</div><div class="stat-value" id="statPending">–</div></div>
+      <div class="stat-card"><div class="stat-label">Completed Payments</div><div class="stat-value" id="statCompleted">–</div></div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Occupied Rooms</div><div class="stat-value" id="statOccRooms">–</div></div>
+      <div class="stat-card"><div class="stat-label">Available Rooms</div><div class="stat-value" id="statAvailRooms">–</div></div>
+      <div class="stat-card"><div class="stat-label">Occupied Apartments</div><div class="stat-value" id="statOccApts">–</div></div>
+      <div class="stat-card"><div class="stat-label">Available Apartments</div><div class="stat-value" id="statAvailApts">–</div></div>
+      <div class="stat-card"><div class="stat-label">Total Employees</div><div class="stat-value" id="statTotalEmp">–</div></div>
+      <div class="stat-card stat-alt"><div class="stat-label">Employees Present Today</div><div class="stat-value" id="statPresent">–</div></div>
+      <div class="stat-card stat-warn"><div class="stat-label">Employees Absent Today</div><div class="stat-value" id="statAbsent">–</div></div>
+      <div class="stat-card"><div class="stat-label">Today's Sales</div><div class="stat-value" id="statTodaySales">–</div></div>
+    </div>
+
+    <div class="section-head" style="margin-top:8px"><h2 style="margin:0">Revenue Trend</h2><span class="chip" style="background:var(--forest-tint); color:var(--forest-2)">Last 14 days</span></div>
+    <div class="panel"><div class="panel-body"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div></div>
+
+    <div class="grid" style="grid-template-columns:1.3fr 1fr; align-items:start">
+      <div class="panel">
+        <div class="panel-head"><h3>Recent Business Activity</h3><a href="/admin/audit-logs.html" class="btn btn-ghost btn-sm">Full log →</a></div>
+        <div class="panel-body"><div class="activity-feed" id="activityFeed"><div class="empty-state">Loading…</div></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>AI Business Insights</h3><a href="/admin/ai-insights.html" class="btn btn-ghost btn-sm">See all →</a></div>
+        <div class="panel-body"><div id="insightsPreview"><div class="empty-state">Loading…</div></div></div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr; align-items:start">
+      <div class="panel">
+        <div class="panel-head"><h3>Arrivals Today</h3><a href="/admin/arrivals.html" class="btn btn-ghost btn-sm">View all →</a></div>
+        <div class="table-wrap"><table class="data-table">
+          <thead><tr><th>Guest</th><th>Room</th><th>Time</th><th>Status</th></tr></thead>
+          <tbody id="arrivalsBody"><tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Departures Today</h3><a href="/admin/departures.html" class="btn btn-ghost btn-sm">View all →</a></div>
+        <div class="table-wrap"><table class="data-table">
+          <thead><tr><th>Guest</th><th>Room</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody id="departuresBody"><tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Room &amp; Apartment Status Overview</h3><a href="/admin/room-status.html" class="btn btn-ghost btn-sm">Full board →</a></div>
+      <div class="panel-body">
+        <div class="room-board" id="roomBoardPreview"><div class="empty-state">Loading rooms…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+/* Every number on this dashboard is derived from live data — nothing here
+   is hard-coded (spec §21-22, §44). Rooms/roomTypes still read directly
+   from Firestore (they're intentionally public); everything else reads
+   through the authenticated staff data API and polls every 8s, since
+   Firestore rules can no longer gate direct client reads without
+   Firebase Auth — see server/controllers/dataController.js. */
+document.addEventListener("firebase-ready", loadDashboard);
+if (window.firebaseDb) loadDashboard();
+
+async function loadDashboard() {
+  const { collection, onSnapshot } = window.fb;
+  const db = window.firebaseDb;
+
+  onSnapshot(collection(db, "rooms"), (rooms) => renderRooms(rooms.docs.map((d) => d.data())));
+
+  function renderRooms(rooms) {
+    const isApt = (r) => String(r.number || "").startsWith("APT");
+    document.getElementById("statOccRooms").textContent = rooms.filter((r) => !isApt(r) && r.status === "occupied").length;
+    document.getElementById("statAvailRooms").textContent = rooms.filter((r) => !isApt(r) && r.status === "available").length;
+    document.getElementById("statOccApts").textContent = rooms.filter((r) => isApt(r) && r.status === "occupied").length;
+    document.getElementById("statAvailApts").textContent = rooms.filter((r) => isApt(r) && r.status === "available").length;
+    const board = document.getElementById("roomBoardPreview");
+    board.innerHTML = rooms.length
+      ? rooms.slice(0, 30).map((r) => `<div class="room-tile"><div class="rnum">${Utils.formatRoomLabel(r.number)}</div>${Utils.statusChip(r.status || "available").outerHTML}</div>`).join("")
+      : `<div class="empty-state">No rooms yet.</div>`;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let reservationsById = {};
+
+  Utils.pollCollection("reservations", (rows) => {
+    reservationsById = {};
+    rows.forEach((r) => { reservationsById[r.id] = r; });
+
+    const arrivals = rows.filter((r) => r.checkIn === todayStr);
+    document.getElementById("arrivalsBody").innerHTML = arrivals.length
+      ? arrivals.map((r) => `<tr><td>${r.guestName || "—"}</td><td>${Utils.formatRoomLabel(r.room)}</td><td>${r.checkInTime || "—"}</td><td>${Utils.statusChip(r.status || "pending").outerHTML}</td></tr>`).join("")
+      : `<tr><td colspan="4"><div class="empty-state">No arrivals scheduled for today.</div></td></tr>`;
+
+    const departures = rows.filter((r) => r.checkOut === todayStr);
+    document.getElementById("departuresBody").innerHTML = departures.length
+      ? departures.map((r) => `<tr><td>${r.guestName || "—"}</td><td>${Utils.formatRoomLabel(r.room)}</td><td>${Utils.formatMoney(r.balance)}</td><td>${Utils.statusChip(r.status || "pending").outerHTML}</td></tr>`).join("")
+      : `<tr><td colspan="4"><div class="empty-state">No departures scheduled for today.</div></td></tr>`;
+
+    updateFolioBreakdown(lastFolioItems);
+  });
+
+  // ---- Revenue by department ----
+  let roomRev = 0, aptRev = 0, restRev = 0, deliveryRev = 0, barRev = 0;
+  let lastFolioItems = [];
+
+  Utils.pollCollection("folioItems", (items) => {
+    lastFolioItems = items;
+    updateFolioBreakdown(items);
+  });
+
+  function updateFolioBreakdown(items) {
+    roomRev = 0; aptRev = 0;
+    items.forEach((it) => {
+      if (it.category !== "room" && it.category !== "tax") return;
+      const res = reservationsById[it.reservationId];
+      const isApt = res && String(res.room || "").startsWith("APT");
+      if (isApt) aptRev += Number(it.amount || 0); else roomRev += Number(it.amount || 0);
+    });
+    document.getElementById("statRoomRev").textContent = Utils.formatMoney(roomRev);
+    document.getElementById("statAptRev").textContent = Utils.formatMoney(aptRev);
+    updateTotalRevenue();
+  }
+
+  Utils.pollCollection("orders", (rows) => {
+    restRev = 0; deliveryRev = 0;
+    rows.forEach((o) => {
+      if (o.type === "delivery") deliveryRev += Number(o.total || 0);
+      else restRev += Number(o.total || 0);
+    });
+    document.getElementById("statRestRev").textContent = Utils.formatMoney(restRev);
+    document.getElementById("statDeliveryRev").textContent = Utils.formatMoney(deliveryRev);
+    updateTotalRevenue();
+  });
+
+  Utils.pollCollection("barSales", (rows) => {
+    barRev = rows.reduce((s, d) => s + Number(d.total || 0), 0);
+    document.getElementById("statBarRev").textContent = Utils.formatMoney(barRev);
+    updateTotalRevenue();
+    buildTrendChartFromPayments(); // bar sales don't feed the trend chart, but keep the pattern simple
+  });
+
+  function updateTotalRevenue() {
+    document.getElementById("statTotalRevenue").textContent = Utils.formatMoney(roomRev + aptRev + restRev + deliveryRev + barRev);
+  }
+
+  Utils.pollCollection("invoices", (rows) => {
+    document.getElementById("statPending").textContent = rows.filter((d) => Number(d.balance) > 0).length;
+    document.getElementById("statCompleted").textContent = rows.filter((d) => Number(d.balance) <= 0).length;
+  });
+
+  let allPayments = [];
+  Utils.pollCollection("payments", (rows) => {
+    allPayments = rows;
+    const today = rows.reduce((sum, p) => {
+      const created = p.createdAt?._seconds ? new Date(p.createdAt._seconds * 1000) : new Date(p.createdAt);
+      return !isNaN(created) && created.toDateString() === new Date().toDateString() ? sum + Number(p.amount || 0) : sum;
+    }, 0);
+    document.getElementById("statTodaySales").textContent = Utils.formatMoney(today);
+    buildTrendChartFromPayments();
+  });
+
+  Utils.pollCollection("employees", (rows) => {
+    document.getElementById("statTotalEmp").textContent = rows.length;
+  });
+  Utils.pollCollection("employeeAttendance", (rows) => {
+    const todays = rows.filter((r) => r.date === todayStr);
+    document.getElementById("statPresent").textContent = todays.filter((r) => r.status === "present").length;
+    document.getElementById("statAbsent").textContent = todays.filter((r) => r.status === "absent").length;
+  });
+
+  // ---- Recent activity feed (spec §27) ----
+  try {
+    const activity = await Utils.api("/reports/activity");
+    const feed = document.getElementById("activityFeed");
+    const items = activity.items || [];
+    feed.innerHTML = items.length ? items.map((a) => `
+      <div class="activity-row">
+        <span class="activity-time">${Utils.formatDateTime(a.createdAt?._seconds ? new Date(a.createdAt._seconds * 1000) : a.createdAt)}</span>
+        <span class="activity-text">${a.userName || "System"} — ${a.action}${a.newValue ? `: ${typeof a.newValue === "object" ? JSON.stringify(a.newValue) : a.newValue}` : ""}</span>
+      </div>`).join("") : `<div class="empty-state">No activity recorded yet.</div>`;
+  } catch (err) {
+    document.getElementById("activityFeed").innerHTML = `<div class="empty-state">Activity feed requires a manager login.</div>`;
+  }
+
+  // ---- AI insights preview (top 3 for this week) ----
+  try {
+    const res = await Utils.api("/reports/ai/insights?period=week");
+    const insights = (res.insights || []).slice(0, 3);
+    const emoji = { good: "🟢", warning: "🟡", critical: "🔴" };
+    document.getElementById("insightsPreview").innerHTML = insights.length
+      ? insights.map((i) => `<div class="insight-row insight-${i.level}" style="margin-bottom:14px"><span class="insight-dot"></span><div><div class="insight-title">${emoji[i.level] || ""} ${i.title}</div><p class="insight-message">${i.message}</p></div></div>`).join("")
+      : `<div class="empty-state">No insights generated yet. <a href="/admin/ai-insights.html">Generate now →</a></div>`;
+  } catch (err) {
+    document.getElementById("insightsPreview").innerHTML = `<div class="empty-state">Insights require a manager login.</div>`;
+  }
+
+  function buildTrendChartFromPayments() {
+    if (!allPayments.length) return;
+    const days = Array.from({ length: 14 }).map((_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (13 - i)); d.setHours(0, 0, 0, 0); return d;
+    });
+    const totals = days.map((day) => {
+      const next = new Date(day); next.setDate(next.getDate() + 1);
+      return allPayments.reduce((sum, p) => {
+        const raw = p.confirmedAt || p.createdAt;
+        const created = raw?._seconds ? new Date(raw._seconds * 1000) : new Date(raw);
+        if (created && created >= day && created < next && p.status === "confirmed") return sum + Number(p.amount || 0);
+        return sum;
+      }, 0);
+    });
+    const ctx = document.getElementById("trendChart");
+    if (window._trendChartInstance) window._trendChartInstance.destroy();
+    window._trendChartInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: days.map((d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" })),
+        datasets: [{ label: "Revenue (FCFA)", data: totals, borderColor: "#1F4B3F", backgroundColor: "rgba(184,135,75,.15)", fill: true, tension: 0.35 }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    });
+  }
+}
+</script>
+</body>
+</html>

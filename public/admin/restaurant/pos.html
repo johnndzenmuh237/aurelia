@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant POS · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Restaurant POS" data-roles="super_admin,manager,restaurant">
+  <div id="admin-content">
+    <div class="grid" style="grid-template-columns:2fr 1fr; align-items:start">
+      <div class="panel"><div class="panel-head"><h3>Menu</h3></div>
+        <div class="panel-body">
+          <div class="grid grid-3" id="menuGrid"><div class="empty-state">Loading menu…</div></div>
+        </div>
+      </div>
+      <div class="panel"><div class="panel-head"><h3>Current Order</h3></div>
+        <div class="panel-body">
+          <div id="orderLines" style="margin-bottom:14px"></div>
+          <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:16px">
+            <span>Total</span><span id="orderTotal">${"0 FCFA"}</span>
+          </div>
+          <div class="field"><label>Table / Room</label><input type="text" id="tableOrRoom" placeholder="Table 4 or Room 203"></div>
+          <div class="field"><label>Guest Name (if charging to room)</label><input type="text" id="guestNameInput"></div>
+          <button class="btn btn-primary btn-block" id="chargeRoomBtn">Charge to Room</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px" id="paidNowBtn">Paid Now (Cash/Mobile Money)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+let cart = [];
+document.addEventListener("firebase-ready", loadMenu);
+if (window.firebaseDb) loadMenu();
+
+function loadMenu() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "menuItems"), (snap) => {
+    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const grid = document.getElementById("menuGrid");
+    grid.innerHTML = items.length ? items.map((m) => `
+      <div class="card" style="padding:14px; cursor:pointer" data-id="${m.id}" data-name="${m.name}" data-price="${m.price}">
+        <strong>${m.name}</strong><div class="muted" style="font-size:.8rem">${m.category || ""}</div>
+        <div style="margin-top:6px; font-weight:700">${Utils.formatMoney(m.price)}</div>
+      </div>`).join("") : `<div class="empty-state">No menu items yet — add some from Restaurant → Menu.</div>`;
+    grid.querySelectorAll("[data-id]").forEach((c) => c.addEventListener("click", () => addToCart(c.dataset.name, Number(c.dataset.price))));
+  });
+}
+
+function addToCart(name, price) {
+  cart.push({ name, price });
+  renderCart();
+}
+function renderCart() {
+  document.getElementById("orderLines").innerHTML = cart.length
+    ? cart.map((l, i) => `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line)"><span>${l.name}</span><span>${Utils.formatMoney(l.price)}</span></div>`).join("")
+    : `<p class="muted">Tap menu items to add them to the order.</p>`;
+  document.getElementById("orderTotal").textContent = Utils.formatMoney(cart.reduce((s, l) => s + l.price, 0));
+}
+renderCart();
+
+async function submitOrder(chargeToRoom) {
+  if (!cart.length) return Utils.toast("Add at least one item first", "error");
+  const target = document.getElementById("tableOrRoom").value.trim();
+  const guestName = document.getElementById("guestNameInput").value.trim();
+  if (!target) return Utils.toast("Enter a table or room", "error");
+  try {
+    // Server posts the charge to the guest folio (if chargeToRoom) and
+    // decrements matching inventory automatically — spec §29, §32.
+    await Utils.api("/restaurant/orders", { method: "POST", body: { items: cart, table: target, guestName, chargeToRoom } });
+    Utils.toast(chargeToRoom ? `Charged to ${target}'s folio` : "Order recorded as paid", "success");
+    cart = []; renderCart();
+    document.getElementById("tableOrRoom").value = ""; document.getElementById("guestNameInput").value = "";
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+document.getElementById("chargeRoomBtn").addEventListener("click", () => submitOrder(true));
+document.getElementById("paidNowBtn").addEventListener("click", () => submitOrder(false));
+</script>
+</body>
+</html>

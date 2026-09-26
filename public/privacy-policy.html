@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy · Aurelia Hotel</title>
+<meta name="description" content="How Aurelia Hotel collects, uses, and protects your personal information.">
+<link rel="canonical" href="https://aureliahotel.com/privacy-policy.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>.legal-body h2{margin-top:36px; font-size:1.2rem} .legal-body h3{margin-top:22px; font-size:1rem} .legal-body ul{padding-left:20px} .legal-body li{margin-bottom:6px} .legal-body p, .legal-body li{color:var(--slate)}</style>
+</head>
+<body>
+<div id="app-header"></div>
+<section class="section" style="padding-top:50px">
+  <div class="container legal-body" style="max-width:760px">
+    <span class="eyebrow">Legal</span>
+    <h1>Privacy Policy</h1>
+    <p class="muted">Last updated: <span id="lastUpdated"></span></p>
+
+    <p>Aurelia Hotel ("we", "us", "our") operates this website and booking system. This policy explains what personal information we collect, why, and how we protect it — in plain language.</p>
+
+    <h2>1. Who we are</h2>
+    <p>Aurelia Hotel, Rue de la Paix, Douala, Cameroon. Contact: <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a>, +237 6 00 00 00 00.</p>
+
+    <h2>2. What we collect</h2>
+    <p>We only collect what's needed to run your booking, order, or stay:</p>
+    <ul>
+      <li><strong>Booking a room or apartment:</strong> full name, phone number, email (optional), check-in/check-out dates, number of guests, special requests.</li>
+      <li><strong>Ordering food delivery:</strong> full name, phone, WhatsApp number (optional), email (optional), delivery address, order notes.</li>
+      <li><strong>Payment:</strong> the mobile money number you provide to MTN Mobile Money or Orange Money to authorize a charge. We never see or store your PIN, and we do not store card numbers because we don't accept cards — payment happens through the provider's own secure request-to-pay system.</li>
+      <li><strong>Job applications:</strong> name, contact details, position applied for, and the experience/qualifications you choose to share.</li>
+      <li><strong>Staff use of the internal system:</strong> a role and a name typed in at login (see our internal Security documentation for how staff sign in) — this is operational data, not marketing data, and is never shared externally.</li>
+    </ul>
+    <p>We do not require you to create an account to book a room or order food. We do not ask for information we don't need — no ID documents, no date of birth, no payment card numbers.</p>
+
+    <h2>3. How we use it</h2>
+    <ul>
+      <li>To create and manage your reservation or food order.</li>
+      <li>To process payment through MTN Mobile Money or Orange Money.</li>
+      <li>To contact you about your booking (confirmations, check-in reminders).</li>
+      <li>To respond to job applications or contact-form messages.</li>
+      <li>To operate the hotel internally — housekeeping, front desk, billing.</li>
+    </ul>
+    <p>We do not sell your information, and we do not use it for advertising or third-party marketing.</p>
+
+    <h2>4. Where it's stored</h2>
+    <p>Booking, order, and operational data is stored in Google Firebase (Firestore), a cloud database. Access is restricted to our own server, which enforces role-based access for staff — see our Security page for detail. We do not use browser tracking or analytics cookies (see our Cookies Policy).</p>
+
+    <h2>5. How long we keep it</h2>
+    <p>Reservation and payment records are kept for as long as needed for accounting and legal record-keeping, and may be deleted by hotel management when no longer required. You can ask us to delete your information by contacting us — see Section 8.</p>
+
+    <h2>6. Who we share it with</h2>
+    <ul>
+      <li><strong>MTN Mobile Money / Orange Money</strong> — to process your payment, only the amount, your mobile money number, and a reference are shared.</li>
+      <li><strong>Google Firebase</strong> — our database and hosting infrastructure provider, bound by their own data-processing terms.</li>
+      <li>We do not share your information with advertisers or data brokers.</li>
+    </ul>
+
+    <h2>7. Your rights</h2>
+    <p>You can ask us at any time to: tell you what information we hold about you, correct inaccurate information, or delete your information (subject to legal/accounting retention requirements). Contact us using the details in Section 1.</p>
+
+    <h2>8. Changes to this policy</h2>
+    <p>We may update this policy from time to time. The "Last updated" date at the top will reflect the latest revision.</p>
+  </div>
+</section>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>document.getElementById("lastUpdated").textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });</script>
+</body>
+</html>

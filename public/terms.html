@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms & Conditions · Aurelia Hotel</title>
+<meta name="description" content="Terms and conditions for booking a room, apartment, or ordering food from Aurelia Hotel.">
+<link rel="canonical" href="https://aureliahotel.com/terms.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>.legal-body h2{margin-top:36px; font-size:1.2rem} .legal-body p, .legal-body li{color:var(--slate)} .legal-body ul{padding-left:20px} .legal-body li{margin-bottom:6px}</style>
+</head>
+<body>
+<div id="app-header"></div>
+<section class="section" style="padding-top:50px">
+  <div class="container legal-body" style="max-width:760px">
+    <span class="eyebrow">Legal</span>
+    <h1>Terms &amp; Conditions</h1>
+    <p class="muted">Last updated: <span id="lastUpdated"></span></p>
+
+    <p>These terms apply when you book a room or apartment, order food delivery, or otherwise use this website. By completing a booking or order, you agree to these terms.</p>
+
+    <h2>1. Bookings</h2>
+    <ul>
+      <li>A reservation is confirmed once your deposit payment is verified by our payment provider (MTN Mobile Money or Orange Money).</li>
+      <li>Room and apartment rates are shown in FCFA and include the taxes displayed at checkout.</li>
+      <li>We reserve a specific room or apartment for your exact dates — availability is checked in real time and cannot be double-booked.</li>
+      <li>Check-in and check-out times are set by hotel policy and communicated at booking; early check-in or late check-out may be available on request, subject to availability.</li>
+    </ul>
+
+    <h2>2. Payments</h2>
+    <ul>
+      <li>We accept MTN Mobile Money and Orange Money. A deposit is required to confirm a booking; the remaining balance is due at check-in or check-out as applicable.</li>
+      <li>Payment confirmation happens through the provider's own secure system — we never see or store your mobile money PIN.</li>
+      <li>Additional charges incurred during your stay (restaurant, laundry, minibar, etc.) are added to your folio and settled at checkout.</li>
+    </ul>
+
+    <h2>3. Cancellations &amp; No-Shows</h2>
+    <p>See our <a href="/refund-policy.html">Refund Policy</a> for cancellation and no-show terms.</p>
+
+    <h2>4. Food Delivery</h2>
+    <ul>
+      <li>Food delivery orders are prepared fresh and delivered to the address you provide — please ensure it's accurate and reachable.</li>
+      <li>A flat delivery fee applies, shown at checkout before you pay.</li>
+      <li>Delivery times are estimates and may vary with order volume and location.</li>
+    </ul>
+
+    <h2>5. Conduct</h2>
+    <p>Guests are expected to treat hotel staff, property, and other guests respectfully. The hotel reserves the right to refuse service or end a stay early in cases of damage, abuse, or illegal activity, in accordance with applicable law.</p>
+
+    <h2>6. Liability</h2>
+    <p>The hotel is not liable for loss or damage to personal belongings except where required by law. Guests are encouraged to use in-room safes where provided.</p>
+
+    <h2>7. Changes to these terms</h2>
+    <p>We may update these terms from time to time; the "Last updated" date reflects the latest revision. Continued use of the site after changes means you accept the updated terms.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions about these terms: <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a>.</p>
+  </div>
+</section>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>document.getElementById("lastUpdated").textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });</script>
+</body>
+</html>

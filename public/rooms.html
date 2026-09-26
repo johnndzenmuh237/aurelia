@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooms & Apartments — Rates & Availability · Aurelia Hotel</title>
+<meta name="description" content="Browse Aurelia Hotel's rooms and apartments in Douala with real-time availability, AC or fan cooling, photos, amenities and transparent nightly/weekly/monthly pricing.">
+<link rel="canonical" href="https://aureliahotel.com/rooms.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/rooms.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<section class="section" style="padding-top:40px">
+  <div class="container">
+    <div class="section-head" style="text-align:left; margin-bottom:24px">
+      <span class="eyebrow">Rooms & Apartments</span>
+      <h1 style="font-size:2rem">Real availability, no surprises at checkout</h1>
+      <p class="muted">Standard rooms with fan cooling, air-conditioned rooms and suites, and fully self-contained apartments for longer stays — every price shown is exactly what you'll pay.</p>
+    </div>
+    <form class="search-card card" id="searchForm" style="position:static; margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr 1fr auto">
+      <div class="field"><label>Check-in</label><input type="date" name="checkIn" required></div>
+      <div class="field"><label>Check-out</label><input type="date" name="checkOut" required></div>
+      <div class="field"><label>Guests</label><select name="guests"><option>1</option><option selected>2</option><option>3</option><option>4+</option></select></div>
+      <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+
+    <div class="filter-bar" id="categoryFilter">
+      <button class="filter-chip active" data-cat="all">All</button>
+      <button class="filter-chip" data-cat="room">Rooms</button>
+      <button class="filter-chip" data-cat="apartment">Apartments</button>
+    </div>
+
+    <div class="grid grid-3" id="roomResults">
+      <div class="skeleton" style="height:280px"></div>
+      <div class="skeleton" style="height:280px"></div>
+      <div class="skeleton" style="height:280px"></div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+const form = document.getElementById("searchForm");
+const initialCheckIn = Utils.qs("checkIn"), initialCheckOut = Utils.qs("checkOut");
+if (initialCheckIn) form.checkIn.value = initialCheckIn;
+if (initialCheckOut) form.checkOut.value = initialCheckOut;
+
+let lastResults = [];
+let activeCategory = "all";
+let roomTypeIndex = {}; // number -> roomType doc, built from Firestore for category/AC/fan lookups
+
+document.addEventListener("firebase-ready", loadRoomTypeIndex);
+if (window.firebaseDb) loadRoomTypeIndex();
+function loadRoomTypeIndex() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "roomTypes"), (snap) => {
+    roomTypeIndex = {};
+    snap.docs.forEach((d) => { roomTypeIndex[d.id] = { id: d.id, ...d.data() }; });
+    render();
+  });
+}
+
+function featureTags(type) {
+  if (!type) return "";
+  const tags = [];
+  if (type.hasAC) tags.push("❄️ AC");
+  else if (type.hasFan) tags.push("🌀 Fan");
+  if (type.category === "apartment") tags.push("🏠 Apartment");
+  return tags.map((t) => `<span class="feature-tag">${t}</span>`).join("");
+}
+
+function render() {
+  const results = document.getElementById("roomResults");
+  let rooms = lastResults;
+  if (activeCategory !== "all") {
+    rooms = rooms.filter((r) => roomTypeIndex[r.typeId]?.category === activeCategory);
+  }
+  const checkIn = form.checkIn.value, checkOut = form.checkOut.value;
+  if (!checkIn || !checkOut) {
+    results.innerHTML = `<div class="empty-state" style="grid-column:1/-1">Choose your dates above to see live availability and pricing.</div>`;
+    return;
+  }
+  results.innerHTML = rooms.length ? rooms.map((r) => {
+    const type = roomTypeIndex[r.typeId];
+    return `
+      <a class="card room-card" href="/room-details.html?type=${r.typeId}&checkIn=${checkIn}&checkOut=${checkOut}">
+        <div class="room-card-media"><img src="${type?.photoUrl || `https://picsum.photos/seed/room-${r.typeId}/600/400`}" alt="${r.type}" loading="lazy"></div>
+        <div class="room-card-body">
+          <h3>${r.type}</h3>
+          <p class="muted">Sleeps up to ${r.capacity} · ${Utils.formatRoomLabel(r.number)}</p>
+          <div style="margin:8px 0">${featureTags(type)}</div>
+          <div class="room-card-price">${Utils.formatMoney(r.rate)}<span class="muted"> / night</span></div>
+        </div>
+      </a>`;
+  }).join("") : `<div class="empty-state" style="grid-column:1/-1">No ${activeCategory === "all" ? "rooms" : activeCategory + "s"} available for those dates. Try adjusting your search.</div>`;
+}
+
+async function search() {
+  const results = document.getElementById("roomResults");
+  results.innerHTML = `<div class="skeleton" style="height:280px"></div><div class="skeleton" style="height:280px"></div><div class="skeleton" style="height:280px"></div>`;
+  const checkIn = form.checkIn.value, checkOut = form.checkOut.value;
+  if (!checkIn || !checkOut) { render(); return; }
+  try {
+    const res = await Utils.api(`/bookings/check-availability?checkIn=${checkIn}&checkOut=${checkOut}`, { auth: false });
+    lastResults = res?.available || [];
+    render();
+  } catch (err) {
+    results.innerHTML = `<div class="empty-state" style="grid-column:1/-1">${err.message}</div>`;
+  }
+}
+form.addEventListener("submit", (e) => { e.preventDefault(); search(); });
+if (initialCheckIn && initialCheckOut) search();
+
+document.getElementById("categoryFilter").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-cat]");
+  if (!btn) return;
+  document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("active"));
+  btn.classList.add("active");
+  activeCategory = btn.dataset.cat;
+  render();
+});
+</script>
+</body>
+</html>

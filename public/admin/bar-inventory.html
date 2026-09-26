@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bar Inventory · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Bar Inventory" data-roles="super_admin,manager,restaurant">
+  <div id="admin-content">
+    <div class="stat-grid" id="barStats">
+      <div class="stat-card stat-alt"><div class="stat-label">Total Inventory Value</div><div class="stat-value" id="statTotalValue">–</div></div>
+      <div class="stat-card"><div class="stat-label">Total Bar Revenue</div><div class="stat-value" id="statTotalRevenue">–</div></div>
+      <div class="stat-card stat-warn"><div class="stat-label">Items Low / Out of Stock</div><div class="stat-value" id="statLowStock">–</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="table-toolbar">
+        <input type="search" id="barSearch" placeholder="Search brand…" style="min-width:220px">
+        <select id="catFilter">
+          <option value="">All Categories</option>
+          <option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option>
+        </select>
+        <span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" id="addItemBtn">+ Add Drink</button>
+      </div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Category</th><th>Brand</th><th>Unit</th><th>Qty Remaining</th><th>Unit Price</th><th>Inventory Value</th><th>Qty Sold</th><th>Revenue</th><th></th></tr></thead>
+        <tbody id="barBody"><tr><td colspan="9"><div class="empty-state">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<dialog id="itemDialog" style="border:none; border-radius:16px; padding:24px; width:min(92vw,420px)">
+  <h3 id="dialogTitle" style="margin-bottom:14px">Add Drink</h3>
+  <form id="itemForm">
+    <div class="field"><label>Category</label>
+      <select name="category" required><option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option></select>
+    </div>
+    <div class="field"><label>Brand / Type</label><input name="brand" required placeholder="e.g. Johnnie Walker Black Label"></div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label>
+        <select name="unit"><option value="bottle">Bottle</option><option value="crate">Crate</option><option value="case">Case</option></select>
+      </div>
+      <div class="field"><label>Quantity</label><input name="quantity" type="number" min="0" required></div>
+    </div>
+    <div class="field"><label>Unit Price (FCFA)</label><input name="unitPrice" type="number" min="0" required></div>
+    <div style="display:flex; gap:10px; margin-top:10px">
+      <button type="button" class="btn btn-ghost" id="dialogCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary btn-block">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+let allItems = [];
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+
+function sub() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "barInventory"), (snap) => {
+    allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  });
+}
+
+function render() {
+  const term = document.getElementById("barSearch").value.trim().toLowerCase();
+  const cat = document.getElementById("catFilter").value;
+  let rows = allItems;
+  if (term) rows = rows.filter((r) => r.brand.toLowerCase().includes(term));
+  if (cat) rows = rows.filter((r) => r.category === cat);
+
+  document.getElementById("statTotalValue").textContent = Utils.formatMoney(allItems.reduce((s, i) => s + Number(i.totalValue || 0), 0));
+  document.getElementById("statTotalRevenue").textContent = Utils.formatMoney(allItems.reduce((s, i) => s + Number(i.totalSalesRevenue || 0), 0));
+  document.getElementById("statLowStock").textContent = allItems.filter((i) => Number(i.quantity) <= 3).length;
+
+  const body = document.getElementById("barBody");
+  body.innerHTML = rows.length ? rows.map((i) => `
+    <tr>
+      <td>${i.category}</td><td><strong>${i.brand}</strong></td><td>${i.unit}</td>
+      <td>${i.quantity} ${Number(i.quantity) <= 3 ? '<span class="chip chip-dirty">Low</span>' : ""}</td>
+      <td>${Utils.formatMoney(i.unitPrice)}</td>
+      <td>${Utils.formatMoney(i.totalValue)}</td>
+      <td>${i.quantitySold || 0}</td>
+      <td>${Utils.formatMoney(i.totalSalesRevenue || 0)}</td>
+      <td><button class="btn btn-sm btn-ghost" data-edit="${i.id}">Edit</button></td>
+    </tr>`).join("") : `<tr><td colspan="9"><div class="empty-state">No drinks yet. Click “Add Drink” to start your inventory.</div></td></tr>`;
+
+  body.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openDialog(allItems.find((i) => i.id === b.dataset.edit))));
+}
+
+document.getElementById("barSearch").addEventListener("input", Utils.debounce(render, 200));
+document.getElementById("catFilter").addEventListener("change", render);
+
+function openDialog(existing) {
+  const dialog = document.getElementById("itemDialog");
+  const form = document.getElementById("itemForm");
+  document.getElementById("dialogTitle").textContent = existing ? `Edit ${existing.brand}` : "Add Drink";
+  form.category.value = existing?.category || "Whiskey";
+  form.brand.value = existing?.brand || "";
+  form.unit.value = existing?.unit || "bottle";
+  form.quantity.value = existing?.quantity ?? "";
+  form.unitPrice.value = existing?.unitPrice ?? "";
+  dialog.dataset.editingId = existing?.id || "";
+  dialog.showModal();
+}
+document.getElementById("addItemBtn").addEventListener("click", () => openDialog(null));
+document.getElementById("dialogCancel").addEventListener("click", () => document.getElementById("itemDialog").close());
+
+document.getElementById("itemForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const dialog = document.getElementById("itemDialog");
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  const editingId = dialog.dataset.editingId;
+  try {
+    if (editingId) await Utils.api("/bar/inventory", { method: "PUT", body: { id: editingId, ...body } });
+    else await Utils.api("/bar/inventory", { method: "POST", body });
+    Utils.toast("Saved", "success");
+    dialog.close();
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+</body>
+</html>

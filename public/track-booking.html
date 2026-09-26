@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track My Booking · Aurelia Hotel</title>
+<meta name="description" content="Check your Aurelia Hotel reservation status using your booking code and phone number — no account needed.">
+<link rel="canonical" href="https://aureliahotel.com/track-booking.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="auth-shell">
+  <div class="auth-card card" style="max-width:480px">
+    <h1 style="font-size:1.7rem">Track My Booking</h1>
+    <p class="muted">Enter your reservation code (from your confirmation email) and the phone number you booked with.</p>
+    <form id="trackForm">
+      <div class="field"><label>Reservation Code</label><input type="text" name="code" placeholder="RES-2026-000001" required></div>
+      <div class="field"><label>Phone Number</label><input type="tel" name="phone" required></div>
+      <button class="btn btn-primary btn-block" type="submit">Check Status</button>
+    </form>
+    <div id="result" style="margin-top:20px"></div>
+  </div>
+</main>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+document.getElementById("trackForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const result = document.getElementById("result");
+  result.innerHTML = `<div class="skeleton" style="height:100px"></div>`;
+  try {
+    const r = await Utils.api(`/bookings/lookup?code=${encodeURIComponent(fd.get("code"))}&phone=${encodeURIComponent(fd.get("phone"))}`, { auth: false });
+    result.innerHTML = `
+      <div class="panel" style="padding:18px">
+        <p><strong>Reservation:</strong> ${r.reservationCode}</p>
+        <p><strong>Room/Apartment:</strong> ${Utils.formatRoomLabel(r.room)} (${r.roomTypeName || ""})</p>
+        <p><strong>Dates:</strong> ${Utils.formatDate(r.checkIn)} → ${Utils.formatDate(r.checkOut)}</p>
+        <p><strong>Status:</strong> ${Utils.statusChip(r.status || "pending").outerHTML}</p>
+        <p><strong>Total:</strong> ${Utils.formatMoney(r.total)} · <strong>Paid:</strong> ${Utils.formatMoney(r.paid)} · <strong>Balance:</strong> ${Utils.formatMoney(r.balance)}</p>
+      </div>`;
+  } catch (err) {
+    result.innerHTML = `<div class="empty-state">${err.message}</div>`;
+  }
+});
+</script>
+</body>
+</html>

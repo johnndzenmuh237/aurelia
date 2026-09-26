@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amenities & Facilities — Pool, Wi-Fi, Parking · Aurelia Hotel</title>
+<meta name="description" content="Explore Aurelia Hotel's facilities in Douala: outdoor swimming pool, free Wi-Fi, airport transfer, 24/7 front desk, secure parking, laundry and more.">
+<link rel="canonical" href="https://aureliahotel.com/amenities.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .amenity-feature{display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; padding:56px 0; border-bottom:1px solid var(--line)}
+  .amenity-feature:last-child{border-bottom:none}
+  .amenity-feature.reverse{direction:rtl}
+  .amenity-feature.reverse > *{direction:ltr}
+  .amenity-feature img{width:100%; height:320px; object-fit:cover; border-radius:var(--radius-l); display:block}
+  .quick-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:20px}
+  .quick-item{text-align:center; padding:20px 12px; border:1px solid var(--line); border-radius:var(--radius-m)}
+  .quick-item .icon{font-size:1.6rem; margin-bottom:8px}
+  @media(max-width:900px){.amenity-feature, .amenity-feature.reverse{grid-template-columns:1fr; direction:ltr} .quick-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="app-header"></div>
+
+<section class="section" style="padding-top:60px">
+  <div class="container">
+    <span class="eyebrow">Amenities & Facilities</span>
+    <h1>Everything you need, on the property</h1>
+    <p class="muted" style="max-width:600px">From a morning swim to a late checkout, here's exactly what's included in your stay.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+
+    <div class="amenity-feature">
+      <img src="https://picsum.photos/seed/aurelia-pool/800/600" alt="Outdoor swimming pool at Aurelia Hotel" loading="lazy">
+      <div>
+        <span class="eyebrow">Swimming Pool</span>
+        <h2>An outdoor pool, open year-round</h2>
+        <p>Unwind after a day of travel or meetings at our outdoor pool, open daily from 7:00 AM to 9:00 PM. Poolside towels and loungers are provided, and our restaurant serves drinks and light bites poolside on request.</p>
+      </div>
+    </div>
+
+    <div class="amenity-feature reverse">
+      <img src="https://picsum.photos/seed/aurelia-gym/800/600" alt="Fitness room at Aurelia Hotel" loading="lazy">
+      <div>
+        <span class="eyebrow">Fitness Room</span>
+        <h2>Stay on schedule while you travel</h2>
+        <p>A small but well-equipped fitness room with cardio machines and free weights, open 24 hours to all in-house guests.</p>
+      </div>
+    </div>
+
+    <div class="amenity-feature">
+      <img src="https://picsum.photos/seed/aurelia-parking/800/600" alt="Secure parking at Aurelia Hotel" loading="lazy">
+      <div>
+        <span class="eyebrow">Secure Parking</span>
+        <h2>On-site parking, monitored around the clock</h2>
+        <p>Free, gated parking for guests with a car, with 24-hour security on-site.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="section" style="background:var(--forest-tint)">
+  <div class="container">
+    <div class="section-head"><span class="eyebrow">Included With Every Stay</span><h2>The everyday essentials</h2></div>
+    <div class="quick-grid">
+      <div class="quick-item card"><div class="icon">📶</div><strong>Free Wi-Fi</strong><p class="muted" style="font-size:.82rem">Throughout the property</p></div>
+      <div class="quick-item card"><div class="icon">🧺</div><strong>Laundry Service</strong><p class="muted" style="font-size:.82rem">Same-day on request</p></div>
+      <div class="quick-item card"><div class="icon">🚗</div><strong>Airport Transfer</strong><p class="muted" style="font-size:.82rem">Arranged on request</p></div>
+      <div class="quick-item card"><div class="icon">🛎️</div><strong>24/7 Front Desk</strong><p class="muted" style="font-size:.82rem">Real people, always on shift</p></div>
+      <div class="quick-item card"><div class="icon">🍽️</div><strong>Restaurant & Bar</strong><p class="muted" style="font-size:.82rem"><a href="/restaurant.html">View the menu →</a></p></div>
+      <div class="quick-item card"><div class="icon">🧹</div><strong>Daily Housekeeping</strong><p class="muted" style="font-size:.82rem">Included in every room</p></div>
+      <div class="quick-item card"><div class="icon">🧊</div><strong>Minibar</strong><p class="muted" style="font-size:.82rem">In every room, on request</p></div>
+      <div class="quick-item card"><div class="icon">💼</div><strong>Business Corner</strong><p class="muted" style="font-size:.82rem">Printing and workspace</p></div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+</body>
+</html>

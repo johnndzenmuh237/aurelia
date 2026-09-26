@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurelia Hotel — Modern Comfort in the Heart of Douala</title>
+<meta name="description" content="Book directly at Aurelia Hotel, Douala — real-time room availability, secure Mobile Money payment, and a stay run on one connected system.">
+<meta property="og:title" content="Aurelia Hotel">
+<meta property="og:description" content="Modern comfort in the heart of Douala. Book direct for the best rate.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://picsum.photos/seed/aurelia-hero/1200/630">
+<link rel="canonical" href="https://aureliahotel.com/index.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/rooms.css">
+<link rel="stylesheet" href="/css/ticker.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Hotel","name":"Aurelia Hotel","address":{"@type":"PostalAddress","streetAddress":"Rue de la Paix","addressLocality":"Douala","addressCountry":"CM"},"telephone":"+237600000000","priceRange":"FCFA"}
+</script>
+</head>
+<body>
+<div id="app-ticker"></div>
+<div id="app-header"></div>
+
+<section class="hero">
+  <div class="hero-media">
+    <img src="https://picsum.photos/seed/aurelia-hero/1600/900" alt="Aurelia Hotel exterior at dusk" loading="eager" fetchpriority="high">
+  </div>
+  <div class="container hero-inner">
+    <span class="eyebrow" style="color:#EAF2EE">Douala, Cameroon</span>
+    <h1 style="color:#fff">Modern comfort, run on one connected system.</h1>
+    <p style="color:#EAF2EE; max-width:520px">Real rooms, real availability, real prices — booked direct and confirmed instantly.</p>
+  </div>
+  <div class="hero-float-img" aria-hidden="true">
+    <img src="https://picsum.photos/seed/aurelia-suite/460/580" alt="" loading="lazy">
+  </div>
+  <div class="container">
+    <form class="search-card card" id="heroSearch">
+      <div class="field"><label>Check-in</label><input type="date" name="checkIn" required></div>
+      <div class="field"><label>Check-out</label><input type="date" name="checkOut" required></div>
+      <div class="field"><label>Guests</label>
+        <select name="guests"><option>1 Guest</option><option selected>2 Guests</option><option>3 Guests</option><option>4+ Guests</option></select>
+      </div>
+      <button class="btn btn-primary" type="submit">Check Availability</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Featured Rooms</span>
+      <h2>Rooms shaped for how you actually travel</h2>
+    </div>
+    <div class="grid grid-3" id="featuredRooms">
+      <div class="skeleton" style="height:280px"></div>
+      <div class="skeleton" style="height:280px"></div>
+      <div class="skeleton" style="height:280px"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--forest-tint)">
+  <div class="container">
+    <div class="section-head"><span class="eyebrow">Amenities</span><h2>Everything a modern stay needs</h2></div>
+    <div class="grid grid-4">
+      <div class="card amenity-card">
+        <img src="https://picsum.photos/seed/aurelia-wifi/300/200" alt="" loading="lazy">
+        <div style="padding:18px"><h3>Free Wi-Fi</h3><p>High-speed internet throughout the property.</p></div>
+      </div>
+      <div class="card amenity-card">
+        <img src="https://picsum.photos/seed/aurelia-restaurant/300/200" alt="Aurelia Hotel restaurant" loading="lazy">
+        <div style="padding:18px"><h3>Restaurant & Bar</h3><p>All-day dining, room service, and charge-to-room. <a href="/restaurant.html">View menu →</a></p></div>
+      </div>
+      <div class="card amenity-card">
+        <img src="https://picsum.photos/seed/aurelia-pool-thumb/300/200" alt="Aurelia Hotel swimming pool" loading="lazy">
+        <div style="padding:18px"><h3>Swimming Pool</h3><p>Outdoor pool, open daily 7 AM–9 PM. <a href="/amenities.html">All amenities →</a></p></div>
+      </div>
+      <div class="card amenity-card">
+        <img src="https://picsum.photos/seed/aurelia-frontdesk/300/200" alt="Aurelia Hotel front desk" loading="lazy">
+        <div style="padding:18px"><h3>24/7 Front Desk</h3><p>Real people, always on shift.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head"><span class="eyebrow">Guests Say</span><h2>Stayed once, came back twice</h2></div>
+    <div class="grid grid-3">
+      <div class="card testimonial-card">
+        <img class="avatar" src="https://picsum.photos/seed/aurelia-guest1/80/80" alt="" loading="lazy">
+        <p>"Check-in took two minutes and the room matched the photos exactly."</p><strong>— Amina T.</strong>
+      </div>
+      <div class="card testimonial-card">
+        <img class="avatar" src="https://picsum.photos/seed/aurelia-guest2/80/80" alt="" loading="lazy">
+        <p>"Booked direct and got a better rate than the OTA I compared it to."</p><strong>— Jean-Paul M.</strong>
+      </div>
+      <div class="card testimonial-card">
+        <img class="avatar" src="https://picsum.photos/seed/aurelia-guest3/80/80" alt="" loading="lazy">
+        <p>"Ordered room service and it just appeared on my bill at checkout — no fuss."</p><strong>— Grace N.</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="grid" style="grid-template-columns:1fr 1fr; align-items:center; gap:48px">
+      <div>
+        <span class="eyebrow">Find Us</span>
+        <h2>Rue de la Paix, Douala</h2>
+        <p>Ten minutes from Douala International Airport, in the heart of the business district.</p>
+        <a class="btn btn-outline" href="/contact.html">Get Directions</a>
+      </div>
+      <div class="card" style="height:280px; overflow:hidden; display:flex; align-items:center; justify-content:center; color:var(--forest); position:relative">
+        <img src="https://picsum.photos/seed/aurelia-map/700/560" alt="Map area near Aurelia Hotel, Douala" loading="lazy" style="width:100%; height:100%; object-fit:cover">
+        <span style="position:absolute; bottom:10px; left:10px; background:rgba(255,255,255,.9); padding:4px 10px; border-radius:999px; font-size:.72rem">Replace with a live Google Map embed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/ticker.js"></script>
+<script>
+document.getElementById("heroSearch").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const params = new URLSearchParams({ checkIn: fd.get("checkIn"), checkOut: fd.get("checkOut"), guests: fd.get("guests") });
+  window.location.href = `/rooms.html?${params.toString()}`;
+});
+
+// Featured rooms come straight from the real roomTypes collection — never
+// a hard-coded list (spec §4: "must NOT create fake room availability").
+// Each card's photo is a deterministic placeholder keyed to the room type
+// id, so the same room always shows the same image until real photography
+// is uploaded (see /public/assets/images and roomTypes.photos in Firestore).
+document.addEventListener("firebase-ready", loadFeatured);
+if (window.firebaseDb) loadFeatured();
+function loadFeatured() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "roomTypes"), (snap) => {
+    const types = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((t) => t.active !== false).slice(0, 3);
+    const grid = document.getElementById("featuredRooms");
+    grid.innerHTML = types.length ? types.map((t) => `
+      <a href="/room-details.html?type=${t.id}" class="card room-card">
+        <div class="room-card-media">
+          <img src="${t.photoUrl || `https://picsum.photos/seed/room-${t.id}/600/400`}" alt="${t.name}" loading="lazy">
+        </div>
+        <div class="room-card-body">
+          <h3>${t.name}</h3>
+          <p class="muted">${t.description || ""}</p>
+          <div class="room-card-price">${Utils.formatMoney(t.basePrice)}<span class="muted"> / night</span></div>
+        </div>
+      </a>`).join("") : `<div class="empty-state" style="grid-column:1/-1">Room types will appear here once added in the admin panel.</div>`;
+  });
+}
+</script>
+</body>
+</html>

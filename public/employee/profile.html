@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile · Aurelia Staff</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/employee.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="guest-shell">
+  <div class="guest-tabs" id="emp-tabs"></div>
+  <h1 style="font-size:1.6rem">My Profile</h1>
+  
+    <div class="panel"><div class="panel-body">
+      <form id="empProfileForm">
+        <div class="field-row"><div class="field"><label>Full Name</label><input name="fullName" id="ePFullName"></div><div class="field"><label>Phone</label><input name="phone" id="ePPhone"></div></div>
+        <div class="field"><label>Emergency Contact</label><input name="emergencyContact" id="ePEmergency"></div>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </form>
+    </div></div>
+
+</main>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/employee-layout.js"></script>
+
+<script>
+Auth.onReady((user, profile) => {
+  if (!user) return;
+  document.getElementById("ePFullName").value = profile?.fullName || "";
+  document.getElementById("ePPhone").value = profile?.phone || "";
+  document.getElementById("ePEmergency").value = profile?.emergencyContact || "";
+});
+document.getElementById("empProfileForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target).entries());
+  try { await Utils.api("/employees/update", { method: "PUT", body }); Utils.toast("Profile updated", "success"); }
+  catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+
+</body>
+</html>

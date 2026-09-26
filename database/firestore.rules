@@ -1,0 +1,50 @@
+rules_version = '2';
+
+/**
+ * Firebase Authentication was removed project-wide (staff sign in with a
+ * shared role password against the Express API instead — see
+ * server/controllers/authController.js, server/middleware/auth.js). That
+ * means `request.auth` is ALWAYS null here now — there is no client-side
+ * session Firestore's rules engine can inspect. Practical consequence:
+ *
+ *   These rules can no longer distinguish "a logged-in staff member
+ *   reading their own dashboard" from "a stranger who found the public
+ *   Firebase web config" — because that distinction used to come from
+ *   Firebase Auth, and Firebase Auth is gone.
+ *
+ * The fix: every collection containing guest data, financial records, or
+ * internal operations is DENIED to direct client reads/writes entirely.
+ * Staff pages read that data through server/controllers/dataController.js
+ * (GET /api/staff/data/:collection), which checks the JWT issued at
+ * login — the real security boundary now lives entirely in the Express
+ * API, not in these rules.
+ *
+ * Only collections that are meant to be visible to anyone — no login,
+ * no staff — stay directly readable here, because the public website
+ * (rooms, restaurant, bar, offers pages) reads them live via onSnapshot
+ * with no authentication at all, by design.
+ *
+ * The server itself (Firebase Admin SDK, server/config/firebase.js)
+ * bypasses ALL of these rules regardless — that's what performs every
+ * write in this system.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Public, no login required (the guest-facing website) ----
+    match /rooms/{id}         { allow read: if true; allow write: if false; }
+    match /roomTypes/{id}     { allow read: if true; allow write: if false; }
+    match /menuItems/{id}     { allow read: if true; allow write: if false; }
+    match /barInventory/{id}  { allow read: if true; allow write: if false; }
+    match /promotions/{id}    { allow read: if true; allow write: if false; }
+    match /settings/{id}      { allow read: if true; allow write: if false; }
+
+    // ---- Everything else: denied to direct client access ----
+    // Staff read these through the authenticated API instead (see the
+    // comment above); nothing ever writes to Firestore directly from a
+    // browser — every write in this system goes through /api.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

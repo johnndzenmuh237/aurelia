@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Sign In · Aurelia Hotel</title>
+<meta name="description" content="Staff sign-in for Aurelia Hotel's management system.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="auth-shell">
+  <div class="auth-card card">
+    <h1 style="font-size:1.8rem">Staff Sign In</h1>
+    <p class="muted">Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
+    <form id="loginForm">
+      <div class="field"><label>Team / Role</label>
+        <select name="role" required>
+          <option value="">Choose your team…</option>
+          <option value="super_admin">Super Admin</option>
+          <option value="manager">Manager</option>
+          <option value="front_desk">Front Desk</option>
+          <option value="reservations">Reservations</option>
+          <option value="housekeeping">Housekeeping</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="restaurant">Restaurant &amp; Bar</option>
+          <option value="hr">HR</option>
+          <option value="accountant">Accountant</option>
+          <option value="employee">Employee</option>
+        </select>
+      </div>
+      <div class="field"><label>Your Name</label><input type="text" name="name" required placeholder="For the activity log"></div>
+      <div class="field"><label>Password</label><input type="password" name="password" required autocomplete="current-password"></div>
+      <div class="form-error hidden" id="loginError"></div>
+      <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+    </form>
+    <p class="form-note" style="margin-top:16px">No account to create — ask your manager for your team's password.</p>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+const ROLE_DEST = {
+  super_admin: "/admin/dashboard.html", manager: "/admin/dashboard.html",
+  front_desk: "/admin/dashboard.html", reservations: "/admin/reservations.html",
+  housekeeping: "/admin/housekeeping.html", maintenance: "/admin/maintenance.html",
+  restaurant: "/admin/restaurant/pos.html", hr: "/admin/employees.html",
+  accountant: "/admin/finance.html", employee: "/employee/dashboard.html",
+};
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const errorBox = document.getElementById("loginError");
+  errorBox.classList.add("hidden");
+  try {
+    const res = await Auth.login(fd.get("role"), fd.get("password"), fd.get("name"));
+    window.location.href = Utils.qs("next") || ROLE_DEST[res.role] || "/admin/dashboard.html";
+  } catch (err) {
+    errorBox.textContent = err.message || "Incorrect password for that team.";
+    errorBox.classList.remove("hidden");
+  }
+});
+</script>
+</body>
+</html>

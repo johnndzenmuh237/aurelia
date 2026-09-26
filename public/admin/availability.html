@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Availability · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Availability" data-roles="super_admin,manager,front_desk,reservations">
+  <div id="admin-content">
+    <div class="panel"><div class="panel-body">
+      <form id="availForm" class="field-row" style="align-items:end">
+        <div class="field"><label>Check-in</label><input type="date" name="checkIn" required></div>
+        <div class="field"><label>Check-out</label><input type="date" name="checkOut" required></div>
+        <div class="field"><button class="btn btn-primary btn-block" type="submit">Check Availability</button></div>
+      </form>
+      <p class="form-note">Runs the same server-side availability check used by the public booking engine (spec §12) — it looks at real reservations, room blocks and out-of-order rooms, never a cached or fake list.</p>
+    </div></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Results</h3></div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Room</th><th>Type</th><th>Capacity</th><th>Rate / night</th><th>Status</th></tr></thead>
+        <tbody id="availBody"><tr><td colspan="5"><div class="empty-state">Choose dates above and search.</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.getElementById("availForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = document.getElementById("availBody");
+  body.innerHTML = Utils.skeletonRows(4, 5);
+  try {
+    const res = await Utils.api(`/rooms/availability?checkIn=${fd.get("checkIn")}&checkOut=${fd.get("checkOut")}`);
+    const rooms = res?.available || [];
+    body.innerHTML = rooms.length
+      ? rooms.map((r) => `<tr><td>${Utils.formatRoomLabel(r.number)}</td><td>${r.type}</td><td>${r.capacity}</td><td>${Utils.formatMoney(r.rate)}</td><td>${Utils.statusChip("available").outerHTML}</td></tr>`).join("")
+      : `<tr><td colspan="5"><div class="empty-state">No rooms available for those dates.</div></td></tr>`;
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="5"><div class="empty-state">${err.message}</div></td></tr>`;
+  }
+});
+</script>
+</body>
+</html>

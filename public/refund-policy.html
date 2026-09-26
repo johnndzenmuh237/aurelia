@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refund & Cancellation Policy · Aurelia Hotel</title>
+<meta name="description" content="Aurelia Hotel's refund and cancellation policy for room, apartment, and food delivery bookings.">
+<link rel="canonical" href="https://aureliahotel.com/refund-policy.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>.legal-body h2{margin-top:36px; font-size:1.2rem} .legal-body p, .legal-body li{color:var(--slate)} .legal-body ul{padding-left:20px} .legal-body li{margin-bottom:6px} table{width:100%; border-collapse:collapse; margin:16px 0} th,td{padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; font-size:.9rem} th{background:var(--forest-tint); color:var(--forest-2)}</style>
+</head>
+<body>
+<div id="app-header"></div>
+<section class="section" style="padding-top:50px">
+  <div class="container legal-body" style="max-width:760px">
+    <span class="eyebrow">Legal</span>
+    <h1>Refund &amp; Cancellation Policy</h1>
+    <p class="muted">Last updated: <span id="lastUpdated"></span></p>
+
+    <h2>Room &amp; Apartment Bookings</h2>
+    <table>
+      <thead><tr><th>When you cancel</th><th>Refund</th></tr></thead>
+      <tbody>
+        <tr><td>More than 48 hours before check-in</td><td>Full deposit refunded</td></tr>
+        <tr><td>Within 48 hours of check-in</td><td>Deposit is non-refundable</td></tr>
+        <tr><td>No-show (guest never arrives, no cancellation)</td><td>Deposit is forfeited</td></tr>
+      </tbody>
+    </table>
+    <p>To cancel a reservation, contact us at <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a> or call the front desk, quoting your reservation code (found on your confirmation, or via <a href="/track-booking.html">Track My Booking</a>).</p>
+
+    <h2>Refund Processing</h2>
+    <p>Approved refunds are returned to the same MTN Mobile Money or Orange Money account the original payment came from. Processing typically takes 3–7 business days, depending on the provider.</p>
+
+    <h2>Food Delivery Orders</h2>
+    <p>Because food is prepared fresh to order, delivery orders cannot be cancelled once the kitchen has started preparing them. If your order arrives incorrect, incomplete, or you were charged in error, contact us within 24 hours at <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a> with your order number and we'll make it right — a replacement or a refund, at our discretion, depending on the situation.</p>
+
+    <h2>Early Departure</h2>
+    <p>Guests who choose to check out earlier than their booked dates are not entitled to a refund for the unused nights, unless agreed otherwise with management in advance.</p>
+
+    <h2>Disputed or Failed Payments</h2>
+    <p>If a Mobile Money payment is deducted from your account but your booking or order does not show as confirmed, contact us immediately with your payment reference — we will investigate with the payment provider and refund any payment that was taken without a corresponding confirmed booking.</p>
+
+    <h2>Contact</h2>
+    <p>Refund and cancellation questions: <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a>, +237 6 00 00 00 00.</p>
+  </div>
+</section>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>document.getElementById("lastUpdated").textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Food Delivery · Aurelia Hotel</title>
+<meta name="description" content="Order food for delivery from Aurelia Hotel's restaurant in Douala — no account needed, pay with MTN Mobile Money or Orange Money.">
+<link rel="canonical" href="https://aureliahotel.com/food-delivery.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .fd-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .fd-card{overflow:hidden}
+  .fd-card img{width:100%; height:140px; object-fit:cover; display:block}
+  .fd-card-body{padding:14px}
+  .qty-row{display:flex; align-items:center; gap:8px; margin-top:8px}
+  .qty-row button{width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:var(--paper); cursor:pointer; font-weight:700}
+  .qty-row span{min-width:20px; text-align:center; font-weight:600}
+  @media(max-width:900px){.fd-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.fd-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app-header"></div>
+
+<section class="section" style="padding-top:40px">
+  <div class="container">
+    <span class="eyebrow">Food Delivery</span>
+    <h1 style="font-size:2rem">Order to your door — no account needed</h1>
+    <p class="muted" style="max-width:600px">Browse the menu, add what you want, then check out as a guest. A flat 1,500 FCFA delivery fee applies.</p>
+
+    <div class="grid" style="grid-template-columns:2fr 1fr; gap:32px; align-items:start; margin-top:24px">
+      <div class="fd-grid" id="menuGrid">
+        <div class="skeleton" style="height:220px"></div><div class="skeleton" style="height:220px"></div><div class="skeleton" style="height:220px"></div>
+      </div>
+
+      <div class="card" style="padding:20px; position:sticky; top:96px">
+        <h3>Your Order</h3>
+        <div id="cartLines" style="margin:12px 0"><p class="muted">Your cart is empty.</p></div>
+        <div style="display:flex; justify-content:space-between; font-size:.9rem"><span>Items</span><span id="itemsTotal">0 FCFA</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:.9rem; margin-bottom:8px"><span>Delivery Fee</span><span>1,500 FCFA</span></div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px solid var(--line); padding-top:8px; margin-bottom:16px"><span>Total</span><span id="grandTotal">0 FCFA</span></div>
+
+        <form id="deliveryForm">
+          <div class="field"><label>Full Name</label><input name="fullName" required></div>
+          <div class="field"><label>Phone</label><input name="phone" type="tel" required></div>
+          <div class="field"><label>WhatsApp Number (optional)</label><input name="whatsapp" type="tel"></div>
+          <div class="field"><label>Email (optional)</label><input name="email" type="email"></div>
+          <div class="field"><label>Delivery Address</label><textarea name="deliveryAddress" rows="2" required></textarea></div>
+          <div class="field"><label>Order Notes (optional)</label><textarea name="notes" rows="2"></textarea></div>
+          <div class="field"><label>Pay With</label>
+            <select name="provider"><option value="mtn_momo">MTN Mobile Money</option><option value="orange_money">Orange Money</option></select>
+          </div>
+          <div class="field"><label>Mobile Money Number</label><input name="momoNumber" type="tel" required></div>
+          <button class="btn btn-primary btn-block" type="submit">Place Order &amp; Pay</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script>
+const DELIVERY_FEE = 1500;
+let cart = {}; // menuItemName -> {name, price, qty}
+
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+function load() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "menuItems"), (snap) => {
+    const dishes = snap.docs.map((d) => d.data()).filter((m) => m.available !== false);
+    document.getElementById("menuGrid").innerHTML = dishes.length ? dishes.map((d) => `
+      <div class="card fd-card">
+        <img src="${d.photoUrl || `https://picsum.photos/seed/dish-${encodeURIComponent(d.name)}/400/300`}" alt="${d.name}" loading="lazy">
+        <div class="fd-card-body">
+          <span class="eyebrow">${d.category}</span>
+          <h4 style="margin:4px 0">${d.name}</h4>
+          <div style="font-weight:700; color:var(--forest-2)">${Utils.formatMoney(d.price)}</div>
+          <div class="qty-row">
+            <button type="button" data-dec="${d.name}">−</button>
+            <span id="qty-${cssId(d.name)}">0</span>
+            <button type="button" data-inc="${d.name}" data-price="${d.price}">+</button>
+          </div>
+        </div>
+      </div>`).join("") : `<div class="empty-state" style="grid-column:1/-1">Menu coming soon.</div>`;
+
+    document.querySelectorAll("[data-inc]").forEach((b) => b.addEventListener("click", () => changeQty(b.dataset.inc, Number(b.dataset.price), 1)));
+    document.querySelectorAll("[data-dec]").forEach((b) => b.addEventListener("click", () => changeQty(b.dataset.dec, 0, -1)));
+  });
+}
+function cssId(name) { return name.replace(/[^a-z0-9]/gi, "-"); }
+
+function changeQty(name, price, delta) {
+  if (!cart[name]) cart[name] = { name, price, qty: 0 };
+  cart[name].qty = Math.max(0, cart[name].qty + delta);
+  if (cart[name].qty === 0 && delta < 0) cart[name].price = cart[name].price || price;
+  const el = document.getElementById(`qty-${cssId(name)}`);
+  if (el) el.textContent = cart[name].qty;
+  renderCart();
+}
+
+function renderCart() {
+  const lines = Object.values(cart).filter((l) => l.qty > 0);
+  const wrap = document.getElementById("cartLines");
+  wrap.innerHTML = lines.length ? lines.map((l) => `<div style="display:flex; justify-content:space-between; padding:4px 0; font-size:.88rem"><span>${l.qty} × ${l.name}</span><span>${Utils.formatMoney(l.qty * l.price)}</span></div>`).join("") : `<p class="muted">Your cart is empty.</p>`;
+  const itemsTotal = lines.reduce((s, l) => s + l.qty * l.price, 0);
+  document.getElementById("itemsTotal").textContent = Utils.formatMoney(itemsTotal);
+  document.getElementById("grandTotal").textContent = Utils.formatMoney(itemsTotal + DELIVERY_FEE);
+}
+
+document.getElementById("deliveryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const items = Object.values(cart).filter((l) => l.qty > 0).map((l) => ({ name: l.name, price: l.price, quantity: l.qty }));
+  if (!items.length) return Utils.toast("Add at least one item to your order", "error");
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  try {
+    const order = await Utils.api("/restaurant/delivery", { method: "POST", auth: false, body: { ...body, items } });
+    // Same guest-checkout Mobile Money flow used for room bookings — server
+    // confirms via provider webhook, never on the frontend response alone.
+    await Utils.api("/payments/create", { method: "POST", auth: false, body: {
+      reservationId: order.orderId, amount: order.total, provider: body.provider, phone: body.momoNumber, orderType: "delivery",
+    }});
+    Utils.toast(`Order ${order.orderNumber} placed — approve the payment prompt on your phone.`, "success");
+    cart = {}; renderCart(); e.target.reset(); load();
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+</body>
+</html>

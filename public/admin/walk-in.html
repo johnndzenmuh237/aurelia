@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walk-in Reservation · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="New Walk-in" data-roles="super_admin,manager,front_desk">
+  <div id="admin-content">
+    <div class="panel" style="max-width:640px">
+      <div class="panel-body">
+        <form id="walkinForm">
+          <div class="field-row">
+            <div class="field"><label>Check-in</label><input type="date" name="checkIn" required></div>
+            <div class="field"><label>Check-out</label><input type="date" name="checkOut" required></div>
+          </div>
+          <div class="field"><label>Room</label>
+            <select name="room" id="roomSelect" required><option value="">Search availability first…</option></select>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="searchRoomsBtn" style="margin-bottom:16px">Search Available Rooms</button>
+
+          <div class="field-row">
+            <div class="field"><label>Guest Full Name</label><input type="text" name="guestName" required></div>
+            <div class="field"><label>Phone</label><input type="tel" name="phone" required></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Email</label><input type="email" name="email"></div>
+            <div class="field"><label>Adults</label><input type="number" name="adults" min="1" value="1" required></div>
+          </div>
+          <div class="field"><label>Deposit Collected (FCFA)</label><input type="number" name="deposit" min="0" value="0"></div>
+          <div class="field"><label>Payment Method</label>
+            <select name="paymentMethod"><option value="cash">Cash</option><option value="mtn_momo">MTN Mobile Money</option><option value="orange_money">Orange Money</option><option value="card">Card</option></select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Create Reservation & Check In</button>
+          <p class="form-note" style="margin-top:10px">Booking Source is recorded as <strong>WALK-IN</strong> automatically. This calls the same server-side availability + reservation logic as the website booking engine (spec §12, §16).</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.getElementById("searchRoomsBtn").addEventListener("click", async () => {
+  const form = document.getElementById("walkinForm");
+  const checkIn = form.checkIn.value, checkOut = form.checkOut.value;
+  if (!checkIn || !checkOut) return Utils.toast("Pick check-in and check-out dates first", "error");
+  try {
+    const res = await Utils.api(`/rooms/availability?checkIn=${checkIn}&checkOut=${checkOut}`);
+    const select = document.getElementById("roomSelect");
+    const rooms = res?.available || [];
+    select.innerHTML = rooms.length
+      ? rooms.map((r) => `<option value="${r.number}">${Utils.formatRoomLabel(r.number)} — ${r.type} — ${Utils.formatMoney(r.rate)}/night</option>`).join("")
+      : `<option value="">No rooms available for those dates</option>`;
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+
+document.getElementById("walkinForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.source = "WALK-IN";
+  try {
+    const res = await Utils.api("/bookings/create", { method: "POST", body });
+    Utils.toast(`Reservation ${res.reservationCode} created`, "success");
+    await Utils.api("/checkin", { method: "POST", body: { reservationId: res.reservationId } });
+    Utils.toast("Guest checked in", "success");
+    e.target.reset();
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+</body>
+</html>

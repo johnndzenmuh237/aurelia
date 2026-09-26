@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Business Insights · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="AI Business Insights" data-roles="super_admin,manager">
+  <div id="admin-content">
+    <div class="table-toolbar" style="border:none; padding:0 0 16px">
+      <div class="filter-bar" id="periodTabs" style="margin:0">
+        <button class="filter-chip" data-period="today">Today</button>
+        <button class="filter-chip active" data-period="week">This Week</button>
+        <button class="filter-chip" data-period="month">This Month</button>
+        <button class="filter-chip" data-period="year">This Year</button>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn btn-primary btn-sm" id="refreshBtn">Refresh Analysis</button>
+    </div>
+
+    <p class="muted" style="margin-bottom:20px">Every insight below is computed from your actual reservations, orders, bar sales and attendance records — nothing here is a placeholder or a guess.</p>
+
+    <div class="grid grid-2" id="insightsGrid">
+      <div class="skeleton" style="height:110px"></div>
+      <div class="skeleton" style="height:110px"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+let activePeriod = "week";
+
+async function loadInsights() {
+  const grid = document.getElementById("insightsGrid");
+  grid.innerHTML = `<div class="skeleton" style="height:110px"></div><div class="skeleton" style="height:110px"></div>`;
+  try {
+    const res = await Utils.api(`/reports/ai/insights?period=${activePeriod}`);
+    renderInsights(res.insights || []);
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">${err.message}</div>`;
+  }
+}
+
+function renderInsights(insights) {
+  const grid = document.getElementById("insightsGrid");
+  if (!insights.length) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty-state">No insights yet for this period. Click “Refresh Analysis” to generate your first business analysis.</div></div>`;
+    return;
+  }
+  const emoji = { good: "🟢", warning: "🟡", critical: "🔴" };
+  grid.innerHTML = insights.map((i) => `
+    <div class="card insight-card">
+      <div class="insight-row insight-${i.level}">
+        <span class="insight-dot"></span>
+        <div>
+          <div class="insight-title">${emoji[i.level] || ""} ${i.title}</div>
+          <p class="insight-message">${i.message}</p>
+          <p class="insight-meta">${i.category ? i.category.charAt(0).toUpperCase() + i.category.slice(1) : "General"}${i.createdAt ? " · " + Utils.formatDateTime(i.createdAt.toDate ? i.createdAt.toDate() : i.createdAt) : ""}</p>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+document.getElementById("periodTabs").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-period]");
+  if (!btn) return;
+  document.querySelectorAll("#periodTabs .filter-chip").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+  activePeriod = btn.dataset.period;
+  loadInsights();
+});
+
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true; btn.textContent = "Analyzing…";
+  try {
+    const res = await Utils.api(`/reports/ai/insights?period=${activePeriod}`, { method: "POST", body: { period: activePeriod } });
+    renderInsights(res.insights || []);
+    Utils.toast("Analysis refreshed", "success");
+  } catch (err) { Utils.toast(err.message, "error"); }
+  btn.disabled = false; btn.textContent = "Refresh Analysis";
+});
+
+loadInsights();
+</script>
+</body>
+</html>

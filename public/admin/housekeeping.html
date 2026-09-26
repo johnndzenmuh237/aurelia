@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Housekeeping · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Housekeeping" data-roles="super_admin,manager,housekeeping">
+  <div id="admin-content">
+    <div class="panel">
+      <div class="panel-head"><h3>Rooms Needing Attention</h3><a href="/admin/housekeeping-tasks.html" class="btn btn-ghost btn-sm">All tasks →</a></div>
+      <div class="panel-body">
+        <div class="room-board" id="hkBoard"><div class="empty-state">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+function sub() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "rooms"), (snap) => {
+    const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => ["dirty", "cleaning", "clean", "inspected"].includes(r.status));
+    const board = document.getElementById("hkBoard");
+    board.innerHTML = rooms.length ? rooms.map((r) => `
+      <div class="room-tile">
+        <div class="rnum">${Utils.formatRoomLabel(r.number)}</div>
+        ${Utils.statusChip(r.status).outerHTML}
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px">
+          ${r.status === "dirty" ? `<button class="btn btn-sm btn-outline" data-id="${r.id}" data-next="clean">Mark Clean</button>` : ""}
+          ${r.status === "clean" ? `<button class="btn btn-sm btn-outline" data-id="${r.id}" data-next="inspected">Mark Inspected</button>` : ""}
+          ${r.status === "inspected" ? `<button class="btn btn-sm btn-primary" data-id="${r.id}" data-next="available">Release Room</button>` : ""}
+        </div>
+      </div>`).join("") : `<div class="empty-state">Every room is available — nothing pending housekeeping right now.</div>`;
+
+    board.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("click", async () => {
+      try {
+        await Utils.api("/housekeeping/complete", { method: "POST", body: { roomId: b.dataset.id, status: b.dataset.next } });
+        Utils.toast("Room status updated", "success");
+      } catch (err) { Utils.toast(err.message, "error"); }
+    }));
+  });
+}
+</script>
+</body>
+</html>

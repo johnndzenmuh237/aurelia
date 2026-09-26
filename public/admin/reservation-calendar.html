@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservation Calendar · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<style>
+  .cal-grid{display:grid; grid-template-columns:120px repeat(14, minmax(64px,1fr)); font-size:.78rem; min-width:1100px}
+  .cal-grid .cal-head, .cal-grid .cal-room{background:var(--forest-tint); font-weight:600; padding:8px 6px; position:sticky; left:0}
+  .cal-grid .cal-head{position:sticky; top:0; z-index:2}
+  .cal-cell{border:1px solid var(--line); padding:6px; min-height:34px; text-align:center}
+  .cal-cell.booked{background:#EFEAFB; color:#6C4FBE; font-weight:600; border-radius:4px}
+</style>
+</head>
+<body>
+<div id="admin-shell" data-title="Reservation Calendar" data-roles="super_admin,manager,front_desk,reservations">
+  <div id="admin-content">
+    <p class="muted">Next 14 days · scroll horizontally on smaller screens</p>
+    <div class="panel"><div class="panel-body" style="overflow-x:auto">
+      <div class="cal-grid" id="calGrid"><div class="empty-state">Loading calendar…</div></div>
+    </div></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+
+async function load() {
+  const { collection, onSnapshot } = window.fb;
+  let rooms = [], reservations = [];
+  const render = () => {
+    if (!rooms.length) { document.getElementById("calGrid").innerHTML = `<div class="empty-state">No rooms yet.</div>`; return; }
+    const days = Array.from({ length: 14 }).map((_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d; });
+    let html = `<div class="cal-head">Room</div>` + days.map((d) => `<div class="cal-head">${d.toLocaleDateString(undefined,{weekday:"short",day:"numeric"})}</div>`).join("");
+    rooms.forEach((r) => {
+      html += `<div class="cal-room">${Utils.formatRoomLabel(r.number)}</div>`;
+      days.forEach((d) => {
+        const dStr = d.toISOString().slice(0, 10);
+        const booking = reservations.find((res) => res.room === r.number && res.checkIn <= dStr && res.checkOut > dStr);
+        html += `<div class="cal-cell ${booking ? "booked" : ""}" title="${booking ? booking.guestName : "Available"}">${booking ? "●" : ""}</div>`;
+      });
+    });
+    document.getElementById("calGrid").innerHTML = html;
+  };
+  onSnapshot(collection(window.firebaseDb, "rooms"), (snap) => { rooms = snap.docs.map((d) => d.data()); render(); });
+  Utils.pollCollection("reservations", (rows) => { reservations = rows; render(); });
+}
+</script>
+</body>
+</html>
