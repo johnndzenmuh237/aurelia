@@ -32,9 +32,16 @@
 <script>
 Auth.onReady((user, profile) => {
   if (!user) return;
+<<<<<<< HEAD
   const empId = profile?.fullName || user.uid;
   Utils.pollCollection("employeeAttendance", (all) => {
     const rows = all.filter((r) => r.employeeId === empId);
+=======
+  const empId = profile?.employeeId || user.uid;
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "employeeAttendance"), where("employeeId", "==", empId)), (snap) => {
+    const rows = snap.docs.map((d) => d.data());
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     document.getElementById("attBody").innerHTML = rows.length ? rows.map((r) => `
       <tr><td>${Utils.formatDate(r.date)}</td><td>${r.checkIn||"—"}</td><td>${r.checkOut||"—"}</td><td>${Utils.statusChip(r.status||"present").outerHTML}</td></tr>`).join("")
       : `<tr><td colspan="4"><div class="empty-state">No attendance records yet.</div></td></tr>`;

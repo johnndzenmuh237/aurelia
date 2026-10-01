@@ -57,7 +57,11 @@ document.getElementById("searchRoomsBtn").addEventListener("click", async () => 
     const select = document.getElementById("roomSelect");
     const rooms = res?.available || [];
     select.innerHTML = rooms.length
+<<<<<<< HEAD
       ? rooms.map((r) => `<option value="${r.number}">${Utils.formatRoomLabel(r.number)} — ${r.type} — ${Utils.formatMoney(r.rate)}/night</option>`).join("")
+=======
+      ? rooms.map((r) => `<option value="${r.number}">Room ${r.number} — ${r.type} — ${Utils.formatMoney(r.rate)}/night</option>`).join("")
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       : `<option value="">No rooms available for those dates</option>`;
   } catch (err) { Utils.toast(err.message, "error"); }
 });

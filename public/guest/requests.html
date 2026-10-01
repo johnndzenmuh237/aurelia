@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service Requests · My Aurelia</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/guest.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="guest-shell">
+  <div class="guest-tabs" id="guest-tabs"></div>
+  <h1 style="font-size:1.6rem">Service Requests</h1>
+  
+    <form class="panel" id="reqForm" style="padding:20px; margin-bottom:20px">
+      <div class="field-row">
+        <div class="field"><label>Category</label>
+          <select name="category"><option>Extra Towels</option><option>Room Cleaning</option><option>Food & Drinks</option><option>Laundry</option><option>Maintenance</option><option>Wake-up Call</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Priority</label><select name="priority"><option>Normal</option><option>High</option></select></div>
+      </div>
+      <div class="field"><label>Details</label><textarea name="description" rows="2"></textarea></div>
+      <button class="btn btn-primary" type="submit">Send Request</button>
+    </form>
+    <div class="panel"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Category</th><th>Details</th><th>Status</th></tr></thead>
+      <tbody id="reqBody"><tr><td colspan="3"><div class="empty-state">Loading…</div></td></tr></tbody>
+    </table></div></div>
+
+</main>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/guest-layout.js"></script>
+
+<script>
+let currentUser = null;
+Auth.onReady((user) => {
+  if (!user) return;
+  currentUser = user;
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "guestRequests"), where("guestUid", "==", user.uid)), (snap) => {
+    const rows = snap.docs.map((d) => d.data());
+    document.getElementById("reqBody").innerHTML = rows.length ? rows.map((r) => `
+      <tr><td>${r.category}</td><td>${r.description||"—"}</td><td>${Utils.statusChip(r.status||"pending").outerHTML}</td></tr>`).join("")
+      : `<tr><td colspan="3"><div class="empty-state">No requests yet.</div></td></tr>`;
+  });
+});
+document.getElementById("reqForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target).entries());
+  try { await Utils.api("/guests/create", { method: "POST", body: { ...body, type: "guest_request" } }); Utils.toast("Request sent", "success"); e.target.reset(); }
+  catch (err) { Utils.toast(err.message, "error"); }
+});
+</script>
+
+</body>
+</html>

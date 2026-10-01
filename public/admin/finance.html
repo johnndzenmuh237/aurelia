@@ -35,16 +35,28 @@
 <script>
 document.addEventListener("firebase-ready", load);
 if (window.firebaseDb) load();
+<<<<<<< HEAD
 function load() {
+=======
+async function load() {
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const { collection, onSnapshot } = window.fb;
   const db = window.firebaseDb;
   const now = new Date();
 
+<<<<<<< HEAD
   let roomRev = 0, restRev = 0, otherRev = 0, expMonth = 0, totalRooms = 1, checkedInCount = 0;
 
   Utils.pollCollection("folioItems", (items) => {
     roomRev = restRev = otherRev = 0;
     items.forEach((it) => {
+=======
+  let roomRev = 0, restRev = 0, otherRev = 0;
+  onSnapshot(collection(db, "folioItems"), (snap) => {
+    roomRev = restRev = otherRev = 0;
+    snap.docs.forEach((d) => {
+      const it = d.data();
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       const amt = Number(it.amount || 0);
       if (it.category === "room") roomRev += amt;
       else if (it.category === "restaurant") restRev += amt;
@@ -56,21 +68,35 @@ function load() {
     updateNet();
   });
 
+<<<<<<< HEAD
   Utils.pollCollection("expenses", (rows) => {
     expMonth = rows.reduce((sum, e) => {
       const created = e.createdAt?._seconds ? new Date(e.createdAt._seconds * 1000) : new Date(e.createdAt);
+=======
+  let expMonth = 0;
+  onSnapshot(collection(db, "expenses"), (snap) => {
+    expMonth = snap.docs.reduce((sum, d) => {
+      const e = d.data();
+      const created = e.createdAt?.toDate ? e.createdAt.toDate() : new Date(e.createdAt);
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       return (created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()) ? sum + Number(e.amount || 0) : sum;
     }, 0);
     document.getElementById("expMonth").textContent = Utils.formatMoney(expMonth);
     updateNet();
   });
 
+<<<<<<< HEAD
   Utils.pollCollection("invoices", (rows) => {
     const outstanding = rows.reduce((s, d) => s + Number(d.balance || 0), 0);
+=======
+  onSnapshot(collection(db, "invoices"), (snap) => {
+    const outstanding = snap.docs.reduce((s, d) => s + Number(d.data().balance || 0), 0);
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     document.getElementById("statOutstanding2").textContent = Utils.formatMoney(outstanding);
   });
 
   onSnapshot(collection(db, "rooms"), (roomSnap) => {
+<<<<<<< HEAD
     totalRooms = roomSnap.size || 1;
     updateAdr();
   });
@@ -86,6 +112,16 @@ function load() {
     document.getElementById("statAdr").textContent = Utils.formatMoney(adr);
     document.getElementById("statRevpar").textContent = Utils.formatMoney((adr * checkedInCount) / totalRooms);
   }
+=======
+    const totalRooms = roomSnap.size || 1;
+    onSnapshot(collection(db, "reservations"), (resSnap) => {
+      const checkedIn = resSnap.docs.map((d) => d.data()).filter((r) => r.status === "Checked In");
+      const adr = checkedIn.length ? checkedIn.reduce((s, r) => s + Number(r.rate || 0), 0) / checkedIn.length : 0;
+      document.getElementById("statAdr").textContent = Utils.formatMoney(adr);
+      document.getElementById("statRevpar").textContent = Utils.formatMoney((adr * checkedIn.length) / totalRooms);
+    });
+  });
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
   function updateNet() {
     document.getElementById("statNet").textContent = Utils.formatMoney(roomRev + restRev + otherRev - expMonth);

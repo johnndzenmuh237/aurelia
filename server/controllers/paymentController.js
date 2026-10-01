@@ -5,11 +5,19 @@ const { ApiError } = require("../utils/errors");
 
 async function create(req, res, next) {
   try {
+<<<<<<< HEAD
     const { reservationId, amount, provider, phone, orderType } = req.body;
     if (!reservationId || !amount || !provider || !phone) {
       throw new ApiError(400, "reservationId, amount, provider and phone are required.");
     }
     const result = await initiatePayment({ reservationId, amount, provider, phone, uid: req.user?.uid, orderType });
+=======
+    const { reservationId, amount, provider, phone } = req.body;
+    if (!reservationId || !amount || !provider || !phone) {
+      throw new ApiError(400, "reservationId, amount, provider and phone are required.");
+    }
+    const result = await initiatePayment({ reservationId, amount, provider, phone, uid: req.user?.uid });
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     res.status(201).json(result);
   } catch (err) { next(err); }
 }

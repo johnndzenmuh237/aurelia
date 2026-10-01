@@ -41,7 +41,11 @@ async function load() {
     const days = Array.from({ length: 14 }).map((_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d; });
     let html = `<div class="cal-head">Room</div>` + days.map((d) => `<div class="cal-head">${d.toLocaleDateString(undefined,{weekday:"short",day:"numeric"})}</div>`).join("");
     rooms.forEach((r) => {
+<<<<<<< HEAD
       html += `<div class="cal-room">${Utils.formatRoomLabel(r.number)}</div>`;
+=======
+      html += `<div class="cal-room">${r.number}</div>`;
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       days.forEach((d) => {
         const dStr = d.toISOString().slice(0, 10);
         const booking = reservations.find((res) => res.room === r.number && res.checkIn <= dStr && res.checkOut > dStr);
@@ -51,7 +55,11 @@ async function load() {
     document.getElementById("calGrid").innerHTML = html;
   };
   onSnapshot(collection(window.firebaseDb, "rooms"), (snap) => { rooms = snap.docs.map((d) => d.data()); render(); });
+<<<<<<< HEAD
   Utils.pollCollection("reservations", (rows) => { reservations = rows; render(); });
+=======
+  onSnapshot(collection(window.firebaseDb, "reservations"), (snap) => { reservations = snap.docs.map((d) => d.data()); render(); });
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 }
 </script>
 </body>

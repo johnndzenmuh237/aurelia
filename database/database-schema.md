@@ -7,6 +7,7 @@ root level (no nested subcollections) to keep queries simple across roles.
 ## Core reservation flow
 
 **rooms**
+<<<<<<< HEAD
 `{ number, displayNumber, roomTypeId, type, floor, building, capacity, rate, status,
    createdAt }`
 `status`: available | reserved | occupied | dirty | cleaning | clean |
@@ -18,6 +19,12 @@ different. `displayNumber` is the guest-facing label ("Room 3", "Apartment
 12"); the client also derives this automatically from `number` via
 `Utils.formatRoomLabel()` wherever a room is displayed without a full room
 document on hand (e.g. inside a reservation).
+=======
+`{ number, roomTypeId, type, floor, building, capacity, rate, status,
+   createdAt }`
+`status`: available | reserved | occupied | dirty | cleaning | clean |
+inspected | maintenance | outoforder
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 **roomTypes**
 `{ name, category, description, basePrice, maxAdults, maxChildren, bedType,
@@ -72,6 +79,7 @@ No Show | Waitlisted
 **maintenanceRequests** `{ room, issue, priority, assignedTechnician,
    status, estimatedCost, actualCost, createdAt, completedDate }`
 
+<<<<<<< HEAD
 **orders** (restaurant) `{ type, items[], table, guestName, total, status,
    kitchenStatus, createdAt }` — plus, when `type: "delivery"`:
 `{ orderNumber, fullName, phone, whatsapp, email, deliveryAddress, notes,
@@ -82,6 +90,12 @@ No Show | Waitlisted
 `day` (optional): Monday..Sunday — only set on Breakfast/Lunch/Dinner
 items that rotate daily; omit for items served every day (Drinks,
 Desserts, or a dish available all week).
+=======
+**orders** (restaurant) `{ items[], table, guestName, total, status,
+   kitchenStatus, createdAt }`
+
+**menuItems** `{ name, category, price, description, photoUrl, available }`
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 **inventoryItems** `{ sku, name, category, quantity, minStock, unitCost,
    sellingPrice, location }`
@@ -141,6 +155,7 @@ maintenance | restaurant | hr | accountant | employee | guest
 
 **events** `{ eventName, client, date, guestCount, charges }`
 
+<<<<<<< HEAD
 **barInventory** `{ category, brand, unit, quantity, unitPrice, totalValue,
    quantitySold, totalSalesRevenue }`
 `category`: Whiskey | Champagne | Beer | Juice. `totalValue` and
@@ -235,6 +250,8 @@ Routine list/detail reads and the guest's own self-service profile edit
 are intentionally still not logged (matches the existing convention:
 `auditLogs` records staff-initiated, state-changing actions).
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 ## System
 
 **notifications** `{ type, message, read, createdAt }`

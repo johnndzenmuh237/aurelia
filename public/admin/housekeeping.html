@@ -34,7 +34,11 @@ function sub() {
     const board = document.getElementById("hkBoard");
     board.innerHTML = rooms.length ? rooms.map((r) => `
       <div class="room-tile">
+<<<<<<< HEAD
         <div class="rnum">${Utils.formatRoomLabel(r.number)}</div>
+=======
+        <div class="rnum">${r.number}</div>
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         ${Utils.statusChip(r.status).outerHTML}
         <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px">
           ${r.status === "dirty" ? `<button class="btn btn-sm btn-outline" data-id="${r.id}" data-next="clean">Mark Clean</button>` : ""}

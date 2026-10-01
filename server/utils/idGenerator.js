@@ -47,6 +47,7 @@ async function generateEmployeeCode() {
   return `EMP-${pad(seq, 4)}`;
 }
 
+<<<<<<< HEAD
 async function generateSaleReference() {
   const year = new Date().getFullYear();
   const seq = await nextSequence(`sales_${year}`);
@@ -56,4 +57,9 @@ async function generateSaleReference() {
 module.exports = {
   generateReservationCode, generateGuestCode, generateInvoiceNumber,
   generatePaymentRef, generateEmployeeCode, generateSaleReference, nextSequence,
+=======
+module.exports = {
+  generateReservationCode, generateGuestCode, generateInvoiceNumber,
+  generatePaymentRef, generateEmployeeCode, nextSequence,
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 };

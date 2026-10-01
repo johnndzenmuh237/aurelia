@@ -26,6 +26,7 @@
 <script src="/js/admin-layout.js"></script>
 <script>
 document.getElementById("inhouseBody").innerHTML = Utils.skeletonRows(4, 7);
+<<<<<<< HEAD
 Utils.pollCollection("reservations", (all) => {
   const rows = all.filter((r) => r.status === "Checked In");
   const body = document.getElementById("inhouseBody");
@@ -38,6 +39,25 @@ Utils.pollCollection("reservations", (all) => {
       <td>${r.vip ? "★" : "—"}</td>
     </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No guests currently in-house.</div></td></tr>`;
 });
+=======
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+function sub() {
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "reservations"), where("status", "==", "Checked In")), (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const body = document.getElementById("inhouseBody");
+    body.innerHTML = rows.length ? rows.map((r) => `
+      <tr>
+        <td>${r.guestName || "—"}</td><td>${r.room || "—"}</td>
+        <td>${Utils.formatDate(r.checkIn)}</td><td>${Utils.formatDate(r.checkOut)}</td>
+        <td>${Utils.nightsBetween(r.checkIn, r.checkOut)}</td>
+        <td>${Utils.formatMoney(r.balance)}</td>
+        <td>${r.vip ? "★" : "—"}</td>
+      </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No guests currently in-house.</div></td></tr>`;
+  });
+}
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 </script>
 </body>
 </html>

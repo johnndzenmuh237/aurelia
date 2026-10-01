@@ -37,10 +37,23 @@
 <script>
 let allRes = [];
 document.getElementById("resBody").innerHTML = Utils.skeletonRows(6, 8);
+<<<<<<< HEAD
 Utils.pollCollection("reservations", (rows) => {
   allRes = rows;
   render();
 });
+=======
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+
+function sub() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "reservations"), (snap) => {
+    allRes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  });
+}
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 function render() {
   const term = document.getElementById("resSearch").value.trim().toLowerCase();
@@ -54,7 +67,11 @@ function render() {
     <tr>
       <td style="font-family:var(--font-mono)">${r.reservationCode || r.id}</td>
       <td>${r.guestName || "—"}</td>
+<<<<<<< HEAD
       <td>${Utils.formatRoomLabel(r.room)}</td>
+=======
+      <td>${r.room || "—"}</td>
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       <td>${Utils.formatDate(r.checkIn)}</td>
       <td>${Utils.formatDate(r.checkOut)}</td>
       <td>${Utils.formatMoney(r.balance)}</td>

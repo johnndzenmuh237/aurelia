@@ -1,4 +1,5 @@
 /**
+<<<<<<< HEAD
  * Seeds Firestore with the exact inventory the hotel actually operates:
  *   - 10 Fan rooms @ 10,000 FCFA/night
  *   - 10 AC rooms @ 14,000 FCFA/night
@@ -13,6 +14,17 @@
  *
  * This data lives only in Firestore — the app itself never hard-codes any
  * of it, so you can safely delete and re-run this at any time in a
+=======
+ * Seeds Firestore with realistic demo/test data (spec §82):
+ *   - 5 room types, 100 rooms across 5 floors / 2 buildings
+ *   - 200 guests, 100 reservations in a mix of statuses
+ *   - housekeeping tasks, maintenance requests, employees, restaurant
+ *     menu, inventory, expenses, payroll
+ *
+ * This data lives only in Firestore — the app itself never hard-codes any
+ * of it (dashboards, availability, etc. all read live from these
+ * collections), so you can safely delete and re-run this at any time in a
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
  * dev/staging project.
  *
  * Usage:  node database/seed.js
@@ -22,9 +34,20 @@ require("dotenv").config();
 const { db, FieldValue } = require("../server/config/firebase");
 
 const ROOM_TYPES = [
+<<<<<<< HEAD
   { name: "Room with Fan", category: "room", basePrice: 10000, maxAdults: 2, maxChildren: 1, bedType: "Queen", hasAC: false, hasFan: true, weeklyDiscountPercent: 8, monthlyDiscountPercent: 20, description: "A comfortable room cooled by ceiling fan.", photoUrl: "https://picsum.photos/seed/room-fan/900/600" },
   { name: "Room with AC", category: "room", basePrice: 14000, maxAdults: 2, maxChildren: 1, bedType: "Queen", hasAC: true, hasFan: false, weeklyDiscountPercent: 8, monthlyDiscountPercent: 20, description: "The same comfortable room, fully air conditioned.", photoUrl: "https://picsum.photos/seed/room-ac/900/600" },
   { name: "Apartment", category: "apartment", basePrice: 25000, maxAdults: 4, maxChildren: 2, bedType: "Queen + Living Room", hasAC: true, hasFan: false, weeklyDiscountPercent: 15, monthlyDiscountPercent: 35, description: "A self-contained apartment with a kitchenette and living area — built for guests staying a week or more.", photoUrl: "https://picsum.photos/seed/apartment/900/600" },
+=======
+  { name: "Standard Room (Fan)", category: "room", basePrice: 25000, maxAdults: 2, maxChildren: 1, bedType: "Queen", hasAC: false, hasFan: true, weeklyDiscountPercent: 8, monthlyDiscountPercent: 20, description: "A comfortable, budget-friendly room cooled by ceiling fan — ideal for the everyday traveler.", photoUrl: "https://picsum.photos/seed/room-standard-fan/900/600" },
+  { name: "Standard Room (AC)", category: "room", basePrice: 35000, maxAdults: 2, maxChildren: 1, bedType: "Queen", hasAC: true, hasFan: false, weeklyDiscountPercent: 8, monthlyDiscountPercent: 20, description: "The same comfortable standard room, with full air conditioning.", photoUrl: "https://picsum.photos/seed/room-standard-ac/900/600" },
+  { name: "Deluxe Room", category: "room", basePrice: 55000, maxAdults: 2, maxChildren: 2, bedType: "King", hasAC: true, hasFan: false, weeklyDiscountPercent: 10, monthlyDiscountPercent: 22, description: "More space, a work desk, air conditioning, and a better view.", photoUrl: "https://picsum.photos/seed/room-deluxe/900/600" },
+  { name: "Executive Room", category: "room", basePrice: 75000, maxAdults: 2, maxChildren: 2, bedType: "King", hasAC: true, hasFan: false, weeklyDiscountPercent: 10, monthlyDiscountPercent: 25, description: "Executive lounge access, air conditioning, and premium amenities.", photoUrl: "https://picsum.photos/seed/room-executive/900/600" },
+  { name: "Suite", category: "room", basePrice: 120000, maxAdults: 3, maxChildren: 2, bedType: "King + Sofa Bed", hasAC: true, hasFan: false, weeklyDiscountPercent: 12, monthlyDiscountPercent: 28, description: "A separate living area, full air conditioning, for longer or more comfortable stays.", photoUrl: "https://picsum.photos/seed/room-suite/900/600" },
+  { name: "Family Room", category: "room", basePrice: 90000, maxAdults: 4, maxChildren: 2, bedType: "Two Queens", hasAC: true, hasFan: false, weeklyDiscountPercent: 10, monthlyDiscountPercent: 22, description: "Room enough for the whole family, fully air conditioned.", photoUrl: "https://picsum.photos/seed/room-family/900/600" },
+  { name: "One-Bedroom Apartment", category: "apartment", basePrice: 65000, maxAdults: 3, maxChildren: 2, bedType: "Queen + Living Room", hasAC: true, hasFan: false, weeklyDiscountPercent: 15, monthlyDiscountPercent: 35, description: "A self-contained apartment with a kitchenette and living area — built for guests staying a week or more.", photoUrl: "https://picsum.photos/seed/apartment-one-bed/900/600" },
+  { name: "Two-Bedroom Apartment", category: "apartment", basePrice: 95000, maxAdults: 5, maxChildren: 3, bedType: "Two Queens + Living Room", hasAC: true, hasFan: false, weeklyDiscountPercent: 15, monthlyDiscountPercent: 35, description: "Two bedrooms, a full kitchen, and a living/dining area — ideal for families or longer corporate stays.", photoUrl: "https://picsum.photos/seed/apartment-two-bed/900/600" },
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 ];
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -38,6 +61,7 @@ function randomDate(daysFromNow) {
 async function seedRoomTypesAndRooms() {
   const typeRefs = [];
   for (const t of ROOM_TYPES) {
+<<<<<<< HEAD
     const ref = await db.collection("roomTypes").add({ ...t, active: true, roomCount: t.category === "apartment" ? 23 : 10, createdAt: FieldValue.serverTimestamp() });
     typeRefs.push({ id: ref.id, ...t });
   }
@@ -77,6 +101,32 @@ async function seedRoomTypesAndRooms() {
     roomRefs.push({ id: ref.id, number: `APT${i}`, typeId: aptType.id, typeName: aptType.name, rate: aptType.basePrice });
   }
 
+=======
+    const ref = await db.collection("roomTypes").add({ ...t, active: true, roomCount: 12, createdAt: FieldValue.serverTimestamp() });
+    typeRefs.push({ id: ref.id, ...t });
+  }
+
+  const buildings = ["A", "B"];
+  let roomNumber = 100;
+  const roomRefs = [];
+  for (let i = 0; i < 96; i++) {
+    const floor = Math.floor(i / 24) + 1;
+    const type = typeRefs[i % typeRefs.length];
+    roomNumber = 100 * floor + (i % 20) + 1;
+    const ref = await db.collection("rooms").add({
+      number: String(roomNumber),
+      roomTypeId: type.id,
+      type: type.name,
+      floor,
+      building: buildings[i % 2],
+      capacity: type.maxAdults,
+      rate: type.basePrice,
+      status: "available",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    roomRefs.push({ id: ref.id, number: String(roomNumber), typeId: type.id, typeName: type.name, rate: type.basePrice });
+  }
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   return { typeRefs, roomRefs };
 }
 
@@ -99,7 +149,11 @@ async function seedGuests() {
 
 async function seedReservations(roomRefs, guestRefs) {
   const statuses = ["Pending", "Confirmed", "Checked In", "Checked Out", "Cancelled", "No Show"];
+<<<<<<< HEAD
   for (let i = 0; i < 60; i++) {
+=======
+  for (let i = 0; i < 100; i++) {
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     const room = randomFrom(roomRefs);
     const guest = randomFrom(guestRefs);
     const offset = Math.floor(Math.random() * 20) - 10;
@@ -124,6 +178,7 @@ async function seedReservations(roomRefs, guestRefs) {
 
 async function seedOpsAndPeople() {
   const menuItems = [
+<<<<<<< HEAD
     { name: "Omelette & Toast", category: "Breakfast", day: "Monday", price: 3000, description: "Two-egg omelette, toast and coffee.", photoUrl: "https://picsum.photos/seed/dish-mon-breakfast/500/400" },
     { name: "Akara & Pap", category: "Breakfast", day: "Tuesday", price: 2500, description: "Fried bean cakes with corn pap.", photoUrl: "https://picsum.photos/seed/dish-tue-breakfast/500/400" },
     { name: "Continental Breakfast", category: "Breakfast", day: "Wednesday", price: 4000, description: "Eggs to order, toast, fresh fruit, and locally roasted coffee.", photoUrl: "https://picsum.photos/seed/dish-wed-breakfast/500/400" },
@@ -145,11 +200,19 @@ async function seedOpsAndPeople() {
     { name: "Beef Suya Platter", category: "Dinner", day: "Friday", price: 8000, description: "Extra portion beef suya with sides.", photoUrl: "https://picsum.photos/seed/dish-suya-platter/500/400" },
     { name: "Fried Rice & Chicken", category: "Dinner", day: "Saturday", price: 6000, description: "Vegetable fried rice with grilled chicken.", photoUrl: "https://picsum.photos/seed/dish-fried-rice/500/400" },
     { name: "Roast Fish Platter", category: "Dinner", day: "Sunday", price: 7500, description: "Sunday roast fish with all the sides.", photoUrl: "https://picsum.photos/seed/dish-roast-fish/500/400" },
+=======
+    { name: "Grilled Chicken", category: "Lunch", price: 6500, description: "Free-range chicken, grilled and served with plantain and a house pepper sauce.", photoUrl: "https://picsum.photos/seed/dish-grilled-chicken/500/400" },
+    { name: "Beef Suya", category: "Dinner", price: 7500, description: "Marinated beef skewers, char-grilled and dusted with suya spice.", photoUrl: "https://picsum.photos/seed/dish-beef-suya/500/400" },
+    { name: "Continental Breakfast", category: "Breakfast", price: 4000, description: "Eggs to order, toast, fresh fruit, and locally roasted coffee.", photoUrl: "https://picsum.photos/seed/dish-breakfast/500/400" },
+    { name: "Ndolé", category: "Lunch", price: 5500, description: "A Cameroonian classic — bitterleaf stew with groundnuts, served with rice or plantain.", photoUrl: "https://picsum.photos/seed/dish-ndole/500/400" },
+    { name: "Grilled Fish (Tilapia)", category: "Dinner", price: 8000, description: "Whole tilapia, grilled and served with a spicy tomato sauce.", photoUrl: "https://picsum.photos/seed/dish-grilled-fish/500/400" },
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     { name: "Fresh Juice", category: "Drinks", price: 1500, description: "Seasonal fruit, pressed fresh daily.", photoUrl: "https://picsum.photos/seed/dish-juice/500/400" },
     { name: "Chocolate Cake", category: "Desserts", price: 2500, description: "Rich, house-baked chocolate cake.", photoUrl: "https://picsum.photos/seed/dish-cake/500/400" },
   ];
   for (const m of menuItems) await db.collection("menuItems").add({ ...m, available: true });
 
+<<<<<<< HEAD
   const barItems = [
     { category: "Whiskey", brand: "Johnnie Walker Black Label", unit: "bottle", quantity: 24, unitPrice: 35000 },
     { category: "Whiskey", brand: "Chivas Regal 12", unit: "bottle", quantity: 18, unitPrice: 40000 },
@@ -165,6 +228,8 @@ async function seedOpsAndPeople() {
     await db.collection("barInventory").add({ ...b, totalValue: b.quantity * b.unitPrice, quantitySold: 0, totalSalesRevenue: 0, createdAt: FieldValue.serverTimestamp() });
   }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const inventoryItems = [
     { sku: "LIN-001", name: "Bath Towels", category: "Linen", quantity: 300, minStock: 50, unitCost: 3500 },
     { sku: "CLN-001", name: "All-Purpose Cleaner", category: "Cleaning Supplies", quantity: 80, minStock: 20, unitCost: 2200 },

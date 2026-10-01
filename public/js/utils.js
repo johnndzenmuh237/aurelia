@@ -27,6 +27,7 @@ const Utils = (() => {
     return Math.max(1, Math.round((b - a) / 86400000));
   }
 
+<<<<<<< HEAD
   /** Converts an internal room number (F3, A3, APT12) into the friendly
    * label guests and staff actually use ("Room 3 (Fan)", "Room 3 (AC)",
    * "Apartment 12"). The internal code stays unique per physical unit so
@@ -43,6 +44,8 @@ const Utils = (() => {
     return roomNumber;
   }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   function toast(message, type = "info", ms = 4200) {
     let stack = document.querySelector(".toast-stack");
     if (!stack) {
@@ -70,10 +73,17 @@ const Utils = (() => {
   }
 
   async function getIdToken() {
+<<<<<<< HEAD
     // Kept as a function (not inlined) since several older page scripts
     // still call Utils.getIdToken() directly — now reads the JWT that
     // Auth.login() stored, instead of a Firebase ID token.
     return typeof Auth !== "undefined" ? Auth.getToken() : null;
+=======
+    if (window.firebaseAuth?.currentUser) {
+      return window.firebaseAuth.currentUser.getIdToken();
+    }
+    return null;
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   }
 
   /**
@@ -85,9 +95,14 @@ const Utils = (() => {
   async function api(path, { method = "GET", body, auth = true } = {}) {
     const headers = { "Content-Type": "application/json" };
     if (auth) {
+<<<<<<< HEAD
       const token = getIdToken();
       const resolved = token instanceof Promise ? await token : token;
       if (resolved) headers.Authorization = `Bearer ${resolved}`;
+=======
+      const token = await getIdToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     }
     const res = await fetch(`${window.HOTEL_CONFIG.apiBaseUrl}${path}`, {
       method,
@@ -111,6 +126,7 @@ const Utils = (() => {
     };
   }
 
+<<<<<<< HEAD
   /**
    * Replaces Firestore's onSnapshot() for staff-only collections now that
    * there's no Firebase Auth to gate direct client reads with. Fetches
@@ -137,11 +153,17 @@ const Utils = (() => {
     return () => { stopped = true; };
   }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   function skeletonRows(count, cols) {
     return Array.from({ length: count })
       .map(() => `<tr>${Array.from({ length: cols }).map(() => `<td><div class="skeleton" style="height:14px;width:80%"></div></td>`).join("")}</tr>`)
       .join("");
   }
 
+<<<<<<< HEAD
   return { formatMoney, formatDate, formatDateTime, nightsBetween, formatRoomLabel, toast, statusChip, qs, api, pollCollection, debounce, skeletonRows, getIdToken };
+=======
+  return { formatMoney, formatDate, formatDateTime, nightsBetween, toast, statusChip, qs, api, debounce, skeletonRows, getIdToken };
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 })();

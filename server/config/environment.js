@@ -14,6 +14,7 @@ function required(name, fallback) {
   return val;
 }
 
+<<<<<<< HEAD
 /** Shared role passwords — the whole staff login system. No per-person
  * accounts, no signup: everyone on a given team uses that team's one
  * password (set here, in .env, never in code). Each login issues a JWT
@@ -33,6 +34,8 @@ const ROLE_PASSWORDS = {
   employee: process.env.EMPLOYEE_PASSWORD,
 };
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 module.exports = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT || 4000),
@@ -43,16 +46,24 @@ module.exports = {
   noShowCutoffHours: Number(process.env.NO_SHOW_CUTOFF_HOURS || 6),
   timezone: process.env.HOTEL_TIMEZONE || "Africa/Douala",
 
+<<<<<<< HEAD
   jwtSecret: required("JWT_SECRET"),
   roles: { passwords: ROLE_PASSWORDS },
 
   firebase: {
     // Firestore is still the database (that part wasn't the source of the
     // frustration) — only Firebase Authentication and Storage are gone.
+=======
+  firebase: {
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     projectId: required("FIREBASE_PROJECT_ID"),
     clientEmail: required("FIREBASE_CLIENT_EMAIL"),
     // Escaped newlines from most .env formats need converting back.
     privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+<<<<<<< HEAD
+=======
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   },
 
   mtnMomo: {
@@ -82,6 +93,7 @@ module.exports = {
     smsAccountSid: process.env.SMS_ACCOUNT_SID,
     smsAuthToken: process.env.SMS_AUTH_TOKEN,
     smsFromNumber: process.env.SMS_FROM_NUMBER,
+<<<<<<< HEAD
 
     // WhatsApp Cloud API (Meta) — used for the receptionist "new paid
     // booking" notification. Leave WHATSAPP_ACCESS_TOKEN blank in
@@ -93,6 +105,8 @@ module.exports = {
     // Fallback only — the real, admin-editable value lives at
     // settings/hotel.whatsapp.receptionistNumber (see server/services/whatsappService.js).
     receptionistWhatsappNumber: process.env.RECEPTIONIST_WHATSAPP_NUMBER,
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   },
 
   isProd: (process.env.NODE_ENV || "development") === "production",

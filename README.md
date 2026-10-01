@@ -3,17 +3,28 @@
 A complete hotel operating system: public booking website, admin PMS
 (reservations, rooms, housekeeping, restaurant/POS, inventory, HR/payroll,
 finance, reports), a guest self-service portal, and an employee portal —
+<<<<<<< HEAD
 all backed by one Node/Express API (Firestore as the database only —
 no Firebase Authentication, no accounts) with MTN Mobile
+=======
+all backed by one Node/Express + Firebase Firestore API, with MTN Mobile
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 Money and Orange Money as the payment providers.
 
 ## Quick start
 
 ```bash
 npm install
+<<<<<<< HEAD
 cp .env.example .env        # fill in Firestore credentials, JWT_SECRET, role passwords, payment creds
 npm run seed                 # optional: exact room/apartment inventory, demo guests, bar stock, daily menu
 npm run dev                  # API on http://localhost:4000
+=======
+cp .env.example .env        # fill in your Firebase + payment credentials
+npm run seed                # optional: 100 rooms, 200 guests, 100 reservations of demo data
+node scripts/create-admin.js you@example.com "Your Name"
+npm run dev                 # API on http://localhost:4000
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 npx serve public             # frontend on http://localhost:3000 (or similar)
 ```
 
@@ -28,7 +39,11 @@ server/         Express API — config, middleware, controllers, services, model
 api/            Single Vercel serverless entry point wrapping server/app.js
 database/       Firestore rules, indexes, schema doc, seed script
 functions/      Optional Firebase Cloud Functions (scheduled jobs, defensive triggers)
+<<<<<<< HEAD
 scripts/        CLI utilities (generate-secret, seed, migrate)
+=======
+scripts/        CLI utilities (create-admin, seed, migrate)
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 docs/           Installation, deployment, API, database, payments, security, user manual
 tests/          Jest tests for the core business logic
 ```
@@ -52,6 +67,7 @@ money/messages, by design (see the relevant docs):
   system silently falls back to in-app notifications only (never fails
   the underlying booking/payment because a notification couldn't send).
 
+<<<<<<< HEAD
 ## Staff login
 
 There are no accounts. Each team shares one password, set by you in
@@ -63,6 +79,14 @@ and entering that password.
 Guests never sign in at all — booking and food delivery work as guest
 checkout, and `/track-booking.html` lets a guest look up their
 reservation with just their booking code and phone number.
+=======
+## Demo / test accounts
+
+None are seeded automatically — create your first admin with
+`node scripts/create-admin.js`, then create additional staff accounts
+through Employees → Applications (or directly via `/api/employees/hire`)
+once you're signed in. Guests self-register at `/register.html`.
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 ## Scope note
 

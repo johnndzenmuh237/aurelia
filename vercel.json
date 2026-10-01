@@ -7,6 +7,10 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/admin/(.*)", "destination": "/public/admin/$1" },
+<<<<<<< HEAD
+=======
+    { "source": "/guest/(.*)", "destination": "/public/guest/$1" },
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     { "source": "/employee/(.*)", "destination": "/public/employee/$1" },
     { "source": "/((?!api/).*)", "destination": "/public/$1" }
   ],

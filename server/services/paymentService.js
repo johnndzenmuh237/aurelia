@@ -5,7 +5,10 @@ const { generatePaymentRef } = require("../utils/idGenerator");
 const { balanceOf } = require("../utils/calculations");
 const { logAction } = require("../utils/audit");
 const { notifyPaymentReceived } = require("./notificationService");
+<<<<<<< HEAD
 const { notifyReceptionistOfPaidBooking } = require("./whatsappService");
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 /**
  * Initiates a Mobile Money charge and creates a `pending` payment record.
@@ -14,11 +17,18 @@ const { notifyReceptionistOfPaidBooking } = require("./whatsappService");
  * transaction really succeeded. This is spec §20's core rule: never trust
  * the frontend response alone.
  */
+<<<<<<< HEAD
 async function initiatePayment({ reservationId, amount, provider, phone, uid, orderType = "reservation" }) {
   const collectionName = orderType === "delivery" ? "orders" : "reservations";
   const resRef = db.collection(collectionName).doc(reservationId);
   const resSnap = await resRef.get();
   if (!resSnap.exists) throw new ApiError(404, orderType === "delivery" ? "Order not found." : "Reservation not found.");
+=======
+async function initiatePayment({ reservationId, amount, provider, phone, uid }) {
+  const resRef = db.collection("reservations").doc(reservationId);
+  const resSnap = await resRef.get();
+  if (!resSnap.exists) throw new ApiError(404, "Reservation not found.");
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const reservation = resSnap.data();
 
   const paymentRef = await generatePaymentRef();
@@ -27,11 +37,19 @@ async function initiatePayment({ reservationId, amount, provider, phone, uid, or
 
   let providerResponse;
   if (provider === "mtn_momo") {
+<<<<<<< HEAD
     providerResponse = await mtnMomo.requestToPay({ amount, phone, externalId, payerMessage: `Payment for ${reservation.reservationCode || reservation.orderNumber}` });
   } else if (provider === "orange_money") {
     providerResponse = await orangeMoney.requestToPay({
       amount, phone, externalId,
       returnUrl: `${process.env.PUBLIC_APP_URL || ""}/booking-success.html?ref=${reservation.reservationCode || reservation.orderNumber}`,
+=======
+    providerResponse = await mtnMomo.requestToPay({ amount, phone, externalId, payerMessage: `Deposit for ${reservation.reservationCode}` });
+  } else if (provider === "orange_money") {
+    providerResponse = await orangeMoney.requestToPay({
+      amount, phone, externalId,
+      returnUrl: `${process.env.PUBLIC_APP_URL || ""}/booking-success.html?ref=${reservation.reservationCode}`,
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       cancelUrl: `${process.env.PUBLIC_APP_URL || ""}/booking.html`,
     });
   } else {
@@ -39,8 +57,13 @@ async function initiatePayment({ reservationId, amount, provider, phone, uid, or
   }
 
   await paymentDocRef.set({
+<<<<<<< HEAD
     paymentRef, reservationId, orderType, guestUid: uid || reservation.guestUid || null,
     guestName: reservation.guestName || reservation.fullName, amount, currency: "XAF", method: provider,
+=======
+    paymentRef, reservationId, guestUid: uid || reservation.guestUid || null,
+    guestName: reservation.guestName, amount, currency: "XAF", method: provider,
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     status: "pending", providerExternalId: externalId,
     providerReference: providerResponse.referenceId || providerResponse.payToken || null,
     createdAt: FieldValue.serverTimestamp(), createdBy: uid || "guest",
@@ -72,6 +95,7 @@ async function confirmPayment({ paymentId, providerStatus }) {
 
   await paymentRef.update({ status: "confirmed", confirmedAt: FieldValue.serverTimestamp(), providerStatus });
 
+<<<<<<< HEAD
   if (payment.orderType === "delivery") {
     // Food-delivery order: mark paid and hand off to restaurant staff — no
     // folio/reservation balance math involved (spec §12: food delivery).
@@ -86,6 +110,8 @@ async function confirmPayment({ paymentId, providerStatus }) {
     return { confirmed: true };
   }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const resRef = db.collection("reservations").doc(payment.reservationId);
   await db.runTransaction(async (tx) => {
     const resSnap = await tx.get(resRef);
@@ -110,6 +136,7 @@ async function confirmPayment({ paymentId, providerStatus }) {
   await logAction({ user: null, action: "Payment confirmed", entity: "payments", entityId: paymentId, newValue: payment.amount });
   await notifyPaymentReceived({ reservationId: payment.reservationId, amount: payment.amount, paymentRef: payment.paymentRef });
 
+<<<<<<< HEAD
   // Receptionist/manager WhatsApp + dashboard notification for the newly
   // paid room booking (spec §8-9). Re-reads the reservation for its
   // current room/dates rather than trusting the pre-payment snapshot,
@@ -125,6 +152,8 @@ async function confirmPayment({ paymentId, providerStatus }) {
     });
   }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   return { confirmed: true };
 }
 

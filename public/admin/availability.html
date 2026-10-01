@@ -43,7 +43,11 @@ document.getElementById("availForm").addEventListener("submit", async (e) => {
     const res = await Utils.api(`/rooms/availability?checkIn=${fd.get("checkIn")}&checkOut=${fd.get("checkOut")}`);
     const rooms = res?.available || [];
     body.innerHTML = rooms.length
+<<<<<<< HEAD
       ? rooms.map((r) => `<tr><td>${Utils.formatRoomLabel(r.number)}</td><td>${r.type}</td><td>${r.capacity}</td><td>${Utils.formatMoney(r.rate)}</td><td>${Utils.statusChip("available").outerHTML}</td></tr>`).join("")
+=======
+      ? rooms.map((r) => `<tr><td>${r.number}</td><td>${r.type}</td><td>${r.capacity}</td><td>${Utils.formatMoney(r.rate)}</td><td>${Utils.statusChip("available").outerHTML}</td></tr>`).join("")
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       : `<tr><td colspan="5"><div class="empty-state">No rooms available for those dates.</div></td></tr>`;
   } catch (err) {
     body.innerHTML = `<tr><td colspan="5"><div class="empty-state">${err.message}</div></td></tr>`;

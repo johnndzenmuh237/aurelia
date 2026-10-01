@@ -26,7 +26,16 @@
 <script src="/js/admin-layout.js"></script>
 <script>
 const stages = ["new", "preparing", "ready", "delivered"];
+<<<<<<< HEAD
 Utils.pollCollection("orders", (orders) => {
+=======
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+function sub() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "orders"), (snap) => {
+    const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     stages.forEach((s) => {
       const col = document.getElementById(`col-${s}`);
       const rows = orders.filter((o) => (o.kitchenStatus || "new") === s);
@@ -41,7 +50,12 @@ Utils.pollCollection("orders", (orders) => {
         catch (err) { Utils.toast(err.message, "error"); }
       }));
     });
+<<<<<<< HEAD
 });
+=======
+  });
+}
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 </script>
 </body>
 </html>

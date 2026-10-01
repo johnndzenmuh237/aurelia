@@ -69,7 +69,11 @@ function subscribeRooms() {
     const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     board.innerHTML = rooms.length ? rooms.map((r) => `
       <div class="room-tile rs-panel" data-id="${r.id}" data-num="${r.number}">
+<<<<<<< HEAD
         <div class="rnum">${Utils.formatRoomLabel(r.number)}</div>
+=======
+        <div class="rnum">${r.number}</div>
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         <div class="muted" style="font-size:.72rem; margin-bottom:6px">${r.type || ""}</div>
         ${Utils.statusChip(r.status || "available").outerHTML}
       </div>`).join("") : `<div class="empty-state">No rooms yet. Add rooms from Rooms → All Rooms.</div>`;

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receipts · My Aurelia</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/guest.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="guest-shell">
+  <div class="guest-tabs" id="guest-tabs"></div>
+  <h1 style="font-size:1.6rem">Receipts</h1>
+  
+    <div class="panel"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Invoice</th><th>Total</th><th>Status</th><th></th></tr></thead>
+      <tbody id="recBody"><tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr></tbody>
+    </table></div></div>
+
+</main>
+<div id="app-footer"></div>
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/guest-layout.js"></script>
+
+<script>
+Auth.onReady((user) => {
+  if (!user) return;
+  const { collection, query, where, onSnapshot } = window.fb;
+  onSnapshot(query(collection(window.firebaseDb, "invoices"), where("guestUid", "==", user.uid)), (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    document.getElementById("recBody").innerHTML = rows.length ? rows.map((inv) => `
+      <tr><td style="font-family:var(--font-mono)">${inv.invoiceNumber}</td><td>${Utils.formatMoney(inv.total)}</td>
+      <td>${Utils.statusChip(inv.status||"unpaid").outerHTML}</td><td><a class="btn btn-sm btn-outline" href="/api/reports/finance?invoice=${inv.id}&format=pdf">Download</a></td></tr>`).join("")
+      : `<tr><td colspan="4"><div class="empty-state">No invoices yet.</div></td></tr>`;
+  });
+});
+</script>
+
+</body>
+</html>

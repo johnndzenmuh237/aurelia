@@ -28,8 +28,17 @@
 <script src="/js/admin-nav-data.js"></script>
 <script src="/js/admin-layout.js"></script>
 <script>
+<<<<<<< HEAD
 function load() {
   Utils.pollCollection("reservations", (all) => {
+=======
+document.addEventListener("firebase-ready", load);
+if (window.firebaseDb) load();
+function load() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "reservations"), (snap) => {
+    const all = snap.docs.map((d) => d.data());
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     if (!all.length) {
       document.getElementById("sourceBars").innerHTML = `<div class="empty-state">No reservation history yet — analytics will populate as bookings come in.</div>`;
       return;
@@ -55,7 +64,10 @@ function load() {
   function pct(arr, fn) { return pctRaw(arr.filter(fn).length, arr.length); }
   function pctRaw(n, d) { return d ? ((n / d) * 100).toFixed(1) + "%" : "0%"; }
 }
+<<<<<<< HEAD
 load();
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 </script>
 </body>
 </html>

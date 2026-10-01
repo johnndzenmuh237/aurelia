@@ -26,15 +26,31 @@
 <script src="/js/admin-layout.js"></script>
 <script>
 document.getElementById("arrBody").innerHTML = Utils.skeletonRows(4, 7);
+<<<<<<< HEAD
 const todayStr = new Date().toISOString().slice(0, 10);
 Utils.pollCollection("reservations", (all) => {
   const rows = all.filter((r) => r.checkIn === todayStr);
   const body = document.getElementById("arrBody");
+=======
+document.addEventListener("firebase-ready", sub);
+if (window.firebaseDb) sub();
+function sub() {
+  const { collection, query, where, onSnapshot } = window.fb;
+  const start = new Date(); start.setHours(0,0,0,0);
+  const todayStr = start.toISOString().slice(0,10);
+  onSnapshot(query(collection(window.firebaseDb, "reservations"), where("checkIn", "==", todayStr)), (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const body = document.getElementById("arrBody");
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     body.innerHTML = rows.length ? rows.map((r) => `
       <tr>
         <td>${r.guestName || "—"}</td>
         <td style="font-family:var(--font-mono)">${r.reservationCode || r.id}</td>
+<<<<<<< HEAD
         <td>${Utils.formatRoomLabel(r.room) || "Unassigned"}</td>
+=======
+        <td>${r.room || "Unassigned"}</td>
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         <td>${Utils.statusChip(r.paymentStatus || "unpaid").outerHTML}</td>
         <td>${r.vip ? "★ VIP" : "—"}</td>
         <td>${r.specialRequests || "—"}</td>
@@ -45,6 +61,10 @@ Utils.pollCollection("reservations", (all) => {
       catch (err) { Utils.toast(err.message, "error"); }
     }));
   });
+<<<<<<< HEAD
+=======
+}
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 </script>
 </body>
 </html>

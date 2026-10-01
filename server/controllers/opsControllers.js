@@ -4,11 +4,14 @@ const { createHousekeepingTask, completeHousekeeping } = require("../services/ho
 const { postChargeToRoom } = require("../services/folioService");
 const { generatePayroll, approvePayroll } = require("../services/payrollService");
 const { runNightAudit } = require("../services/reportService");
+<<<<<<< HEAD
 const { checkBudgetAlerts } = require("../services/financeService");
 const { recordSale, listSales } = require("../services/saleService");
 const { toCsv } = require("../utils/csv");
 const { renderTablePdf } = require("../utils/pdf");
 const { logAction } = require("../utils/audit");
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 const { ApiError } = require("../utils/errors");
 const { generateEmployeeCode } = require("../utils/idGenerator");
 
@@ -79,6 +82,7 @@ async function updateOrder(req, res, next) {
     res.json({ ok: true });
   } catch (err) { next(err); }
 }
+<<<<<<< HEAD
 
 /** Public food-delivery order — spec §12: guest checkout, no account
  * required. Calculates (price × quantity) + delivery fee server-side,
@@ -111,6 +115,8 @@ async function createDeliveryOrder(req, res, next) {
     res.status(201).json({ orderId: ref.id, orderNumber, itemsTotal, deliveryFee: DELIVERY_FEE, total });
   } catch (err) { next(err); }
 }
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 const menuCrud = genericCrud("menuItems");
 async function menuHandler(req, res, next) {
   try {
@@ -146,19 +152,26 @@ async function hireEmployee(req, res, next) {
     if (!fullName || !position) throw new ApiError(400, "fullName and position are required.");
     const employeeCode = await generateEmployeeCode();
     const result = await employeesCrud.create({ employeeCode, fullName, phone, email, position, department, salary: Number(salary || 0), status: "active" }, req.user?.uid);
+<<<<<<< HEAD
     await logAction({ user: req.user || null, action: "Employee hired", entity: "employees", entityId: result.id, newValue: { fullName, position, department } });
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     res.status(201).json(result);
   } catch (err) { next(err); }
 }
 async function updateEmployee(req, res, next) {
   try {
     const uid = req.user?.uid;
+<<<<<<< HEAD
     if (req.body.id) {
       const { id, ...data } = req.body;
       const result = await employeesCrud.update(id, data, uid);
       await logAction({ user: req.user || null, action: "Employee modified", entity: "employees", entityId: id, newValue: data });
       return res.json(result);
     }
+=======
+    if (req.body.id) return res.json(await employeesCrud.update(req.body.id, req.body, uid));
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     // Employee editing their own profile (no admin `id` supplied)
     const empQuery = await db.collection("employees").where("uid", "==", uid).limit(1).get();
     if (!empQuery.empty) await empQuery.docs[0].ref.update(req.body);
@@ -205,6 +218,7 @@ async function attendanceHandler(req, res, next) {
   } catch (err) { next(err); }
 }
 
+<<<<<<< HEAD
 // ---------- Departments (spec §22) ----------
 const departmentsCrud = genericCrud("departments");
 async function departmentsHandler(req, res, next) {
@@ -236,6 +250,8 @@ async function listSalesHandler(req, res, next) {
   catch (err) { next(err); }
 }
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 // ---------- Payroll ----------
 async function payrollGenerate(req, res, next) {
   try {
@@ -257,6 +273,7 @@ async function financeHandler(req, res, next) {
     }
     if (req.method === "PUT" && req.body.settings) {
       await db.collection("settings").doc("hotel").set(req.body.settings, { merge: true });
+<<<<<<< HEAD
       await logAction({ user: req.user || null, action: "Configuration changed", entity: "settings", entityId: "hotel", newValue: req.body.settings });
       return res.json({ ok: true });
     }
@@ -269,10 +286,17 @@ async function financeHandler(req, res, next) {
       if (req.body.category) checkBudgetAlerts(req.body.category).catch(() => {});
       return res.status(201).json(created);
     }
+=======
+      return res.json({ ok: true });
+    }
+    const generic = genericCrud("expenses");
+    if (req.method === "POST") return res.status(201).json(await generic.create(req.body, req.user?.uid));
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     if (req.method === "PUT") return res.json(await generic.update(req.body.id, req.body, req.user?.uid));
     res.json({ ok: true });
   } catch (err) { next(err); }
 }
+<<<<<<< HEAD
 // ---------- Reports Center — real CSV/PDF export (spec §27) ----------
 const REPORT_DEFS = {
   expenses: {
@@ -368,15 +392,32 @@ async function activityFeed(req, res, next) {
     const snap = await db.collection("auditLogs").orderBy("createdAt", "desc").limit(30).get();
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     res.json({ items });
+=======
+async function reportByKey(req, res, next) {
+  try {
+    // Full CSV/PDF export generation is environment-specific (storage
+    // bucket, signed URLs); this returns a success acknowledgement so the
+    // UI flow works end-to-end — wire in real file generation using
+    // server/utils/pdf.js + a CSV writer once you have a storage target.
+    res.json({ message: `${req.params.key} report (${req.query.format || "csv"}) generation started.` });
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   } catch (err) { next(err); }
 }
 
 module.exports = {
   assignTask, completeTask, createMaintenance, updateMaintenance,
+<<<<<<< HEAD
   createOrder, updateOrder, createDeliveryOrder, menuHandler,
   inventoryItemsHandler, stockHandler,
   hireEmployee, updateEmployee, employeeApplications, attendanceHandler,
   departmentsHandler, createSaleHandler, listSalesHandler,
   payrollGenerate, payrollApprove,
   financeHandler, reportByKey, aiInsightsHandler, activityFeed,
+=======
+  createOrder, updateOrder, menuHandler,
+  inventoryItemsHandler, stockHandler,
+  hireEmployee, updateEmployee, employeeApplications, attendanceHandler,
+  payrollGenerate, payrollApprove,
+  financeHandler, reportByKey,
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 };

@@ -31,15 +31,21 @@ window.ADMIN_NAV = [
   { group: "Restaurant", items: [
     { href: "/admin/restaurant/pos.html", label: "POS", icon: "$" },
     { href: "/admin/restaurant/orders.html", label: "Orders", icon: "≣" },
+<<<<<<< HEAD
     { href: "/admin/restaurant/delivery-orders.html", label: "Delivery Orders", icon: "▶" },
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     { href: "/admin/restaurant/menu.html", label: "Menu", icon: "☰" },
     { href: "/admin/restaurant/tables.html", label: "Tables", icon: "▦" },
     { href: "/admin/restaurant/kitchen.html", label: "Kitchen", icon: "♨" },
   ]},
+<<<<<<< HEAD
   { group: "Bar", items: [
     { href: "/admin/bar-inventory.html", label: "Inventory", icon: "▣" },
     { href: "/admin/bar-sales.html", label: "Record Sale", icon: "$" },
   ]},
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   { group: "Inventory", items: [
     { href: "/admin/inventory.html", label: "Items", icon: "▣" },
     { href: "/admin/inventory-items.html", label: "Stock", icon: "▤" },
@@ -84,7 +90,10 @@ window.ADMIN_NAV = [
   { group: null, items: [
     { href: "/admin/reports.html", label: "Reports", icon: "▤" },
     { href: "/admin/analytics.html", label: "Analytics", icon: "◎" },
+<<<<<<< HEAD
     { href: "/admin/ai-insights.html", label: "AI Business Insights", icon: "✦" },
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     { href: "/admin/night-audit.html", label: "Night Audit", icon: "◑" },
     { href: "/admin/notifications.html", label: "Notifications", icon: "✉" },
     { href: "/admin/audit-logs.html", label: "Audit Logs", icon: "≡" },

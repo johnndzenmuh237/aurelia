@@ -64,6 +64,7 @@ table.data-table tr:hover td{background:#FAF8F3}
 .room-tile{border:1px solid var(--line); border-radius:var(--radius-m); padding:12px; background:var(--paper); cursor:pointer}
 .room-tile .rnum{font-family:var(--font-mono); font-weight:700}
 
+<<<<<<< HEAD
 /* ---------- AutoLot237-inspired components: colored stat-card accents,
    AI insight rows, ranked lists, chart container ---------- */
 .stat-card{position:relative; overflow:hidden}
@@ -98,6 +99,8 @@ table.data-table tr:hover td{background:#FAF8F3}
 .activity-time{font-family:var(--font-mono); font-size:.72rem; color:var(--slate); white-space:nowrap; padding-top:1px}
 .activity-text{color:var(--ink)}
 
+=======
+>>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 @media (max-width: 1100px){
   .admin-sidebar{transform:translateX(-100%)}
   .admin-main{margin-left:0}
