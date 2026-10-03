@@ -1,7 +1,6 @@
 rules_version = '2';
 
 /**
-<<<<<<< HEAD
  * Firebase Authentication was removed project-wide (staff sign in with a
  * shared role password against the Express API instead — see
  * server/controllers/authController.js, server/middleware/auth.js). That
@@ -44,95 +43,6 @@ service cloud.firestore {
     // Staff read these through the authenticated API instead (see the
     // comment above); nothing ever writes to Firestore directly from a
     // browser — every write in this system goes through /api.
-=======
- * These rules govern ONLY direct client access to Firestore (used for live
- * onSnapshot reads in the admin dashboard, room-status board, guest
- * portal, etc). The server (server/config/firebase.js, Firebase Admin SDK)
- * bypasses these rules entirely — that's why all money-moving, inventory-
- * blocking, and availability-checking writes go through /api instead of
- * straight from the browser (spec §71: never trust the client for those).
- *
- * Role is read from users/{uid}.role, set only by the server (see
- * authController.register and employees/hire) — a client can never write
- * its own role.
- */
-function isSignedIn() {
-  return request.auth != null;
-}
-function myRole() {
-  return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-}
-function isStaff() {
-  return isSignedIn() && myRole() in [
-    'super_admin','manager','front_desk','reservations','housekeeping',
-    'maintenance','restaurant','hr','accountant'
-  ];
-}
-function isSuperAdmin() {
-  return isSignedIn() && myRole() == 'super_admin';
-}
-function isOwner(uidField) {
-  return isSignedIn() && resource.data[uidField] == request.auth.uid;
-}
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // Users can read their own profile; only the server ever writes role.
-    match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
-      allow write: if false; // server-only (Admin SDK)
-    }
-
-    // Staff-operational collections: staff can read live for dashboards;
-    // all writes go through /api so business rules are enforced.
-    match /rooms/{id}              { allow read: if true;  allow write: if false; }
-    match /roomTypes/{id}          { allow read: if true;  allow write: if false; }
-    match /reservations/{id}       { allow read: if isStaff() || isOwner('guestUid'); allow write: if false; }
-    match /invoices/{id}           { allow read: if isStaff() || isOwner('guestUid'); allow write: if false; }
-    match /payments/{id}           { allow read: if isStaff() || isOwner('guestUid'); allow write: if false; }
-    match /folioItems/{id}         { allow read: if isStaff(); allow write: if false; }
-    match /refunds/{id}            { allow read: if isStaff(); allow write: if false; }
-    match /guests/{id}             { allow read: if isStaff() || (isSignedIn() && resource.data.uid == request.auth.uid); allow write: if false; }
-    match /guestRequests/{id}      { allow read: if isStaff() || isOwner('guestUid'); allow write: if false; }
-    match /housekeepingTasks/{id}  { allow read: if isStaff(); allow write: if false; }
-    match /maintenanceRequests/{id}{ allow read: if isStaff(); allow write: if false; }
-    match /orders/{id}             { allow read: if isStaff(); allow write: if false; }
-    match /menuItems/{id}          { allow read: if true;  allow write: if false; }
-    match /restaurantTables/{id}   { allow read: if isStaff(); allow write: if false; }
-    match /inventoryItems/{id}     { allow read: if isStaff(); allow write: if false; }
-    match /inventoryTransactions/{id}{ allow read: if isStaff(); allow write: if false; }
-    match /suppliers/{id}          { allow read: if isStaff(); allow write: if false; }
-    match /purchaseOrders/{id}     { allow read: if isStaff(); allow write: if false; }
-    match /expenses/{id}           { allow read: if isStaff(); allow write: if false; }
-    match /employees/{id}          { allow read: if isStaff() || (isSignedIn() && resource.data.uid == request.auth.uid); allow write: if false; }
-    match /employeeApplications/{id}{ allow read: if isStaff(); allow write: if false; }
-    match /employeeAttendance/{id} { allow read: if isStaff() || (isSignedIn() && resource.data.employeeId == request.auth.uid); allow write: if false; }
-    match /schedules/{id}          { allow read: if isStaff() || (isSignedIn() && resource.data.employeeId == request.auth.uid); allow write: if false; }
-    match /payroll/{id}            { allow read: if isStaff(); allow write: if false; }
-    match /salaryHistory/{id}      { allow read: if isStaff(); allow write: if false; }
-    match /promotions/{id}         { allow read: if true;  allow write: if false; }
-    match /promoCodes/{id}         { allow read: if isStaff(); allow write: if false; }
-    match /corporateAccounts/{id}  { allow read: if isStaff(); allow write: if false; }
-    match /groupBookings/{id}      { allow read: if isStaff(); allow write: if false; }
-    match /events/{id}             { allow read: if isStaff(); allow write: if false; }
-    match /lostAndFound/{id}       { allow read: if isStaff(); allow write: if false; }
-    match /laundryOrders/{id}      { allow read: if isStaff(); allow write: if false; }
-    match /minibarItems/{id}       { allow read: if isStaff(); allow write: if false; }
-    match /notifications/{id}      { allow read: if isStaff(); allow write: if false; }
-    match /settings/{id}           { allow read: if true;  allow write: if false; }
-
-    // Audit logs: super admin only, never editable by anyone (spec §70).
-    match /auditLogs/{id} {
-      allow read: if isSuperAdmin();
-      allow write: if false;
-    }
-
-    // Sequential-ID counters: server-only.
-    match /counters/{id} { allow read, write: if false; }
-
-    // Default deny for anything not explicitly listed above.
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     match /{document=**} {
       allow read, write: if false;
     }

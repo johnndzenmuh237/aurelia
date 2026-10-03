@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bar POS · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<style>
+.cat-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.cat-tab{padding:10px 18px;border-radius:10px;background:var(--panel,#1a1f2e);border:1px solid var(--line,#2a3040);cursor:pointer;font-weight:700;font-size:.9rem;}
+.cat-tab.active{background:var(--gold,#c9a24d);color:#1a1200;border-color:var(--gold,#c9a24d);}
+.drink-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.drink-tile{background:var(--panel,#1a1f2e);border:1px solid var(--line,#2a3040);border-radius:12px;padding:16px;text-align:center;cursor:pointer;}
+.drink-tile:hover{border-color:var(--gold,#c9a24d);}
+.drink-tile.out{opacity:.4;cursor:not-allowed;}
+.drink-tile .name{font-weight:800;}
+.drink-tile .price{color:var(--gold,#c9a24d);font-weight:700;margin-top:4px;}
+.drink-tile .stock{font-size:.72rem;opacity:.7;margin-top:6px;}
+.qty-row{display:flex;gap:8px;align-items:center;margin:14px 0;flex-wrap:wrap;}
+.qty-btn{padding:12px 16px;font-size:1rem;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid var(--line,#2a3040);cursor:pointer;}
+.qty-btn.selected{background:var(--gold,#c9a24d);color:#1a1200;border-color:var(--gold,#c9a24d);}
+</style>
+</head>
+<body>
+<div id="admin-shell" data-title="Bar POS — Fast Sell" data-roles="super_admin,manager,restaurant">
+  <div id="admin-content">
+    <div class="panel" style="padding:14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+      <div><strong>Today:</strong> <span id="todaySummary">—</span></div>
+      <input type="search" id="searchBox" placeholder="Search drink…" style="width:220px">
+    </div>
+    <div class="cat-tabs" id="catTabs"></div>
+    <div class="drink-grid" id="drinkGrid"><div class="empty-state">Loading…</div></div>
+
+    <div class="panel" style="margin-top:20px;">
+      <div class="panel-head"><h3>Recent Sales</h3></div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Time</th><th>Drink</th><th>Qty</th><th>Total</th><th>Payment</th></tr></thead>
+        <tbody id="recentBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<dialog id="sellDialog" style="border:none; border-radius:16px; padding:24px; width:min(92vw,420px)">
+  <h3 id="dialogDrinkName" style="margin-bottom:4px"></h3>
+  <p class="muted" id="dialogStock" style="margin-top:0"></p>
+  <p style="font-size:1.3rem; font-weight:800; color:var(--gold,#c9a24d)" id="dialogTotal"></p>
+
+  <label style="font-size:.8rem; opacity:.7;">Quantity</label>
+  <div class="qty-row" id="qtyButtons">
+    <button type="button" class="qty-btn" data-qty="1">+1</button>
+    <button type="button" class="qty-btn" data-qty="2">+2</button>
+    <button type="button" class="qty-btn" data-qty="5">+5</button>
+    <input type="number" id="customQty" min="1" placeholder="Custom" style="width:90px">
+  </div>
+
+  <div class="field"><label>Payment Method</label>
+    <select id="paymentMethod">
+      <option value="cash">Cash</option><option value="mtn_momo">MTN Mobile Money</option>
+      <option value="orange_money">Orange Money</option><option value="card">Card</option><option value="other">Other</option>
+    </select>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:14px;">
+    <button type="button" class="btn btn-ghost" id="cancelSell" style="flex:1">Cancel</button>
+    <button type="button" class="btn btn-primary" id="confirmSell" style="flex:2">SELL</button>
+  </div>
+</dialog>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+let items = [];
+let categories = [];
+let activeCategory = null;
+let selectedItem = null;
+let selectedQty = 1;
+
+document.addEventListener("firebase-ready", subscribeItems);
+if (window.firebaseDb) subscribeItems();
+
+function subscribeItems() {
+  const { collection, onSnapshot } = window.fb;
+  onSnapshot(collection(window.firebaseDb, "barInventory"), (snap) => {
+    items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!categories.length) loadCategories();
+    else renderGrid();
+  });
+}
+
+async function loadCategories() {
+  try {
+    const { items: cats } = await Utils.api("/bar/categories");
+    categories = cats;
+    activeCategory = activeCategory || (categories[0] && categories[0].name);
+    renderTabs();
+    renderGrid();
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+
+function renderTabs() {
+  document.getElementById("catTabs").innerHTML = categories.map((c) =>
+    `<div class="cat-tab ${c.name === activeCategory ? "active" : ""}" data-cat="${c.name}">${c.name}</div>`
+  ).join("");
+  document.querySelectorAll(".cat-tab").forEach((t) => t.addEventListener("click", () => { activeCategory = t.dataset.cat; renderTabs(); renderGrid(); }));
+}
+
+function stockLabel(item) {
+  if (!item.unitsPerContainer) return `${item.quantity} ${item.unit}(s)`;
+  const full = Math.floor(item.quantity / item.unitsPerContainer);
+  const loose = item.quantity % item.unitsPerContainer;
+  return `${full} ${item.containerName}${full === 1 ? "" : "s"} + ${loose} unit${loose === 1 ? "" : "s"}`;
+}
+
+function renderGrid() {
+  const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
+  const list = items.filter((i) => i.category === activeCategory && (!search || i.brand.toLowerCase().includes(search)));
+  document.getElementById("drinkGrid").innerHTML = list.length ? list.map((i) => `
+    <div class="drink-tile ${i.quantity <= 0 ? "out" : ""}" data-id="${i.id}">
+      <div class="name">${i.brand}</div>
+      <div class="price">${Utils.formatMoney(i.sellingPricePerUnit ?? i.unitPrice)}</div>
+      <div class="stock">${stockLabel(i)}</div>
+    </div>`).join("") : `<div class="empty-state">No drinks in this category yet.</div>`;
+  document.querySelectorAll(".drink-tile:not(.out)").forEach((t) => t.addEventListener("click", () => openSellDialog(t.dataset.id)));
+}
+
+function openSellDialog(id) {
+  selectedItem = items.find((i) => i.id === id);
+  selectedQty = 1;
+  document.getElementById("dialogDrinkName").textContent = selectedItem.brand;
+  document.getElementById("dialogStock").textContent = stockLabel(selectedItem) + " available";
+  document.querySelectorAll(".qty-btn").forEach((b) => b.classList.toggle("selected", b.dataset.qty === "1"));
+  document.getElementById("customQty").value = "";
+  updateDialogTotal();
+  document.getElementById("sellDialog").showModal();
+}
+function updateDialogTotal() {
+  const price = selectedItem.sellingPricePerUnit ?? selectedItem.unitPrice;
+  document.getElementById("dialogTotal").textContent = Utils.formatMoney(selectedQty * price);
+}
+document.querySelectorAll(".qty-btn").forEach((btn) => btn.addEventListener("click", () => {
+  selectedQty = Number(btn.dataset.qty);
+  document.getElementById("customQty").value = "";
+  document.querySelectorAll(".qty-btn").forEach((b) => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  updateDialogTotal();
+}));
+document.getElementById("customQty").addEventListener("input", (e) => {
+  if (e.target.value) { selectedQty = Number(e.target.value); document.querySelectorAll(".qty-btn").forEach((b) => b.classList.remove("selected")); updateDialogTotal(); }
+});
+document.getElementById("cancelSell").addEventListener("click", () => document.getElementById("sellDialog").close());
+
+document.getElementById("confirmSell").addEventListener("click", async () => {
+  try {
+    const res = await Utils.api("/bar/sell", { method: "POST", body: {
+      itemId: selectedItem.id, quantitySold: selectedQty, paymentMethod: document.getElementById("paymentMethod").value,
+    }});
+    document.getElementById("sellDialog").close();
+    Utils.toast(`Sale Recorded — ${selectedQty} ${selectedItem.brand} = ${Utils.formatMoney(res.total)}`, "success");
+  } catch (err) { Utils.toast(err.message, "error"); }
+});
+
+document.getElementById("searchBox").addEventListener("input", Utils.debounce(renderGrid, 200));
+
+Utils.pollCollection("barSales", (rows) => {
+  const sorted = rows.sort((a, b) => (b.createdAt?._seconds || 0) - (a.createdAt?._seconds || 0));
+  const recent = sorted.slice(0, 10);
+  document.getElementById("recentBody").innerHTML = recent.length ? recent.map((s) => `
+    <tr><td>${Utils.formatDateTime(s.createdAt?._seconds ? new Date(s.createdAt._seconds * 1000) : s.createdAt)}</td>
+    <td>${s.brand}</td><td>${s.quantitySold}</td><td>${Utils.formatMoney(s.total)}</td><td>${s.paymentMethod || "cash"}</td></tr>`).join("")
+    : `<tr><td colspan="5"><div class="empty-state">No sales yet.</div></td></tr>`;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRows = rows.filter((s) => {
+    const d = s.createdAt?._seconds ? new Date(s.createdAt._seconds * 1000) : (s.createdAt?.toDate ? s.createdAt.toDate() : null);
+    return d && d.toISOString().slice(0, 10) === today;
+  });
+  const bottles = todayRows.reduce((sum, s) => sum + Number(s.quantitySold || 0), 0);
+  const revenue = todayRows.reduce((sum, s) => sum + Number(s.total || 0), 0);
+  document.getElementById("todaySummary").textContent = `${bottles} bottles · ${Utils.formatMoney(revenue)}`;
+});
+</script>
+</body>
+</html>

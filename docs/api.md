@@ -8,7 +8,6 @@ See `api/README.md` for why every route lives in one Express app
 (`server/app.js`) instead of one file per route.
 
 ## Auth
-<<<<<<< HEAD
 No accounts, no signup — every staff team shares one password (set in
 server environment variables, see `docs/security.md`).
 
@@ -18,12 +17,6 @@ server environment variables, see `docs/security.md`).
 | GET | `/auth/verify` | required | — returns `{ user: { role, name } }` |
 | GET | `/staff/data/:collection` | required | Generic authenticated read for staff-only collections (reservations, guests, payments, etc.) — replaces direct Firestore reads now that there's no Firebase Auth for `firestore.rules` to check (see `docs/security.md`) |
 | GET | `/bookings/lookup?code&phone` | none | Guest self-service "track my booking" — no login |
-=======
-| Method | Path | Auth | Body |
-|---|---|---|---|
-| POST | `/auth/register` | none | `{ uid, email, fullName, phone }` — called right after client-side Firebase Auth signup |
-| GET | `/auth/verify` | required | — returns `{ user }` (uid, email, role, profile fields) |
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 ## Bookings & availability
 | Method | Path | Auth | Notes |

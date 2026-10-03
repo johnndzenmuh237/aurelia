@@ -58,24 +58,37 @@
             <option value="orange_money">Orange Money</option>
           </select>
         </div>
-        <div class="field"><label>Mobile Money Number</label><input type="tel" id="momoNumber" placeholder="6XX XXX XXX" required></div>
-        <p class="form-note">You'll receive a prompt on your phone to approve a deposit of the amount shown above. We never mark this reservation confirmed until the provider and our server both verify the payment (spec §20).</p>
+
+        <div class="panel" style="padding:16px; margin-bottom:16px; background:rgba(201,162,77,.08)">
+          <p style="margin:0 0 6px"><strong>Send <span id="depositAmountLabel"></span> to:</strong></p>
+          <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:1.1rem" id="payNumber">—</p>
+          <p class="muted" style="margin:4px 0 0" id="payAccountName"></p>
+        </div>
+
+        <div class="panel" style="padding:14px; margin-bottom:16px; font-size:.88rem">
+          <strong>Where do I find my Transaction ID?</strong><br>
+          Go back to the payment confirmation message <span id="providerNameInline"></span> sent you right after
+          you sent the money (SMS or app notification). You'll see a Transaction ID there — it looks something
+          like <code>189097</code>. Copy that number and enter it below to confirm your payment.
+        </div>
+
+        <div class="field"><label>Transaction ID *</label><input type="text" id="txIdInput" placeholder="e.g. 189097" required></div>
+        <div class="field"><label>Sender phone number (optional but recommended)</label><input type="tel" id="senderPhoneInput" placeholder="6XX XXX XXX"></div>
+
+        <p class="form-note">Your booking is held as <strong>Pending</strong> until a staff member manually checks this transaction ID against our Mobile Money account and confirms it — usually within a few hours.</p>
         <div style="display:flex; gap:10px">
           <button type="button" class="btn btn-ghost" id="back2">Back</button>
-          <button type="button" class="btn btn-gold btn-block" id="payBtn">Pay Deposit & Confirm Booking</button>
+          <button type="button" class="btn btn-gold btn-block" id="payBtn">Submit Payment for Verification</button>
         </div>
       </div>
 
       <div id="step4" class="hidden">
         <div style="text-align:center; padding:20px 0">
-          <h2>Booking Confirmed</h2>
-          <p class="muted">A confirmation has been sent to your email.</p>
+          <h2>Booking Submitted</h2>
+          <p class="muted">Your payment is being verified — your booking will be confirmed once a staff member checks it, usually within a few hours. A confirmation email is sent once that happens.</p>
           <div class="panel" style="padding:20px; text-align:left; margin:20px 0" id="confirmBox"></div>
-<<<<<<< HEAD
+          <div class="panel" style="padding:14px; margin-bottom:16px; font-size:.88rem" id="confirmationDelayBox"></div>
           <a href="/track-booking.html" class="btn btn-primary">Track My Booking</a>
-=======
-          <a href="/guest/dashboard.html" class="btn btn-primary">View My Reservation</a>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         </div>
       </div>
 
@@ -131,38 +144,73 @@ document.getElementById("back1").addEventListener("click", () => showStep(1));
 document.getElementById("back2").addEventListener("click", () => showStep(2));
 
 let guestPayload = null;
+let createdReservation = null;
+let hotelSettings = {};
+
+document.addEventListener("firebase-ready", subscribeSettings);
+if (window.firebaseDb) subscribeSettings();
+function subscribeSettings() {
+  const { doc, onSnapshot } = window.fb;
+  onSnapshot(doc(window.firebaseDb, "settings", "hotel"), (snap) => {
+    hotelSettings = snap.exists() ? snap.data() : {};
+    renderPaymentDetails();
+  });
+}
+
+function renderPaymentDetails() {
+  const provider = document.getElementById("paymentProvider").value;
+  const p = hotelSettings.payment || {};
+  const isM = provider === "mtn_momo";
+  document.getElementById("payNumber").textContent = (isM ? p.mtnNumber : p.orangeNumber) || "(not set yet — contact the hotel directly)";
+  document.getElementById("payAccountName").textContent = (isM ? p.mtnAccountName : p.orangeAccountName) || "";
+  document.getElementById("providerNameInline").textContent = isM ? "MTN Mobile Money" : "Orange Money";
+  if (quote) document.getElementById("depositAmountLabel").textContent = Utils.formatMoney(quote.deposit);
+  document.getElementById("confirmationDelayBox").innerHTML = p.confirmationPhone
+    ? `Confirmation taking a while? Call us directly (calls only) at <strong>${p.confirmationPhone}</strong> so we can confirm your registration.`
+    : "";
+}
+document.getElementById("paymentProvider").addEventListener("change", renderPaymentDetails);
+
 document.getElementById("guestForm").addEventListener("submit", (e) => {
   e.preventDefault();
   guestPayload = Object.fromEntries(new FormData(e.target).entries());
   document.getElementById("paySummary").innerHTML = `<div style="display:flex; justify-content:space-between; font-weight:700"><span>Deposit due</span><span>${Utils.formatMoney(quote.deposit)}</span></div>`;
+  renderPaymentDetails();
   showStep(3);
 });
 
 document.getElementById("payBtn").addEventListener("click", async () => {
   const btn = document.getElementById("payBtn");
-  const momoNumber = document.getElementById("momoNumber").value.trim();
-  if (!momoNumber) return Utils.toast("Enter your Mobile Money number", "error");
-  btn.disabled = true; btn.textContent = "Waiting for approval on your phone…";
+  const transactionId = document.getElementById("txIdInput").value.trim();
+  if (!transactionId) return Utils.toast("Enter your Transaction ID — see the help box above for where to find it", "error");
+  btn.disabled = true; btn.textContent = "Submitting…";
   try {
-    // 1) Create the reservation server-side (re-checks availability, blocks inventory).
-    const created = await Utils.api("/bookings/create", { method: "POST", auth: false, body: {
-      type: typeId, checkIn, checkOut, source: "DIRECT", ...guestPayload,
-    }});
-    // 2) Initiate the mobile money charge; the server confirms only after the
-    //    provider's webhook verifies it — never on the frontend response alone (spec §20).
-    const payment = await Utils.api("/payments/create", { method: "POST", auth: false, body: {
-      reservationId: created.reservationId, amount: quote.deposit,
-      provider: document.getElementById("paymentProvider").value, phone: momoNumber,
+    // 1) Create the reservation server-side (re-checks availability, blocks inventory) —
+    //    unchanged from before.
+    if (!createdReservation) {
+      createdReservation = await Utils.api("/bookings/create", { method: "POST", auth: false, body: {
+        type: typeId, checkIn, checkOut, source: "DIRECT", ...guestPayload,
+      }});
+    }
+    // 2) Submit the guest's manually-sent payment for staff review — this
+    //    does NOT confirm the booking yet. A staff member checks the
+    //    transaction ID against the hotel's own Mobile Money account and
+    //    confirms it from Admin → Payments → Pending Manual Payments.
+    const payment = await Utils.api("/payments/manual-submit", { method: "POST", auth: false, body: {
+      reservationId: createdReservation.reservationId, amount: quote.deposit,
+      provider: document.getElementById("paymentProvider").value,
+      transactionId, senderPhone: document.getElementById("senderPhoneInput").value.trim() || undefined,
     }});
     document.getElementById("confirmBox").innerHTML = `
-      <p><strong>Reservation:</strong> ${created.reservationCode}</p>
+      <p><strong>Reservation:</strong> ${createdReservation.reservationCode}</p>
       <p><strong>Payment reference:</strong> ${payment.paymentRef}</p>
-      <p><strong>Deposit paid:</strong> ${Utils.formatMoney(quote.deposit)}</p>
-      <p><strong>Balance due at check-in:</strong> ${Utils.formatMoney(quote.total - quote.deposit)}</p>`;
+      <p><strong>Deposit submitted:</strong> ${Utils.formatMoney(quote.deposit)}</p>
+      <p><strong>Status:</strong> Pending Verification</p>`;
+    renderPaymentDetails();
     showStep(4);
   } catch (err) {
     Utils.toast(err.message, "error");
-    btn.disabled = false; btn.textContent = "Pay Deposit & Confirm Booking";
+    btn.disabled = false; btn.textContent = "Submit Payment for Verification";
   }
 });
 </script>

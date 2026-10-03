@@ -14,13 +14,16 @@
       <div class="panel-body">
         <form id="sellForm">
           <div class="field"><label>Category</label>
-            <select id="catSelect" required><option value="">Choose a category…</option><option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option></select>
+            <select id="catSelect" required><option value="">Choose a category…</option></select>
           </div>
           <div class="field"><label>Brand / Type</label>
             <select id="brandSelect" required><option value="">Choose a category first…</option></select>
           </div>
           <div id="stockInfo" class="form-note" style="margin-bottom:12px"></div>
           <div class="field"><label>Quantity Sold</label><input type="number" name="quantitySold" min="1" required></div>
+          <div class="field"><label>Payment Method</label>
+            <select name="paymentMethod"><option value="cash">Cash</option><option value="mtn_momo">MTN Mobile Money</option><option value="orange_money">Orange Money</option><option value="card">Card</option><option value="other">Other</option></select>
+          </div>
           <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:16px">
             <span>Sale Total</span><span id="saleTotal">0 FCFA</span>
           </div>
@@ -51,6 +54,14 @@ let selectedItem = null;
 
 document.addEventListener("firebase-ready", sub);
 if (window.firebaseDb) sub();
+loadCategories();
+
+async function loadCategories() {
+  try {
+    const { items } = await Utils.api("/bar/categories");
+    document.getElementById("catSelect").innerHTML = `<option value="">Choose a category…</option>` + items.map((c) => `<option>${c.name}</option>`).join("");
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
 
 function sub() {
   const { collection, onSnapshot } = window.fb;
@@ -85,21 +96,23 @@ document.getElementById("brandSelect").addEventListener("change", (e) => {
 });
 document.querySelector('[name="quantitySold"]').addEventListener("input", updateTotal);
 
+function priceOf(item) { return item.sellingPricePerUnit ?? item.unitPrice; }
 function updateStockInfo() {
   const info = document.getElementById("stockInfo");
-  info.textContent = selectedItem ? `${selectedItem.quantity} ${selectedItem.unit}(s) remaining · ${Utils.formatMoney(selectedItem.unitPrice)} each` : "";
+  info.textContent = selectedItem ? `${selectedItem.quantity} ${selectedItem.unit}(s) remaining · ${Utils.formatMoney(priceOf(selectedItem))} each` : "";
 }
 function updateTotal() {
   const qty = Number(document.querySelector('[name="quantitySold"]').value || 0);
-  document.getElementById("saleTotal").textContent = Utils.formatMoney(selectedItem ? qty * selectedItem.unitPrice : 0);
+  document.getElementById("saleTotal").textContent = Utils.formatMoney(selectedItem ? qty * priceOf(selectedItem) : 0);
 }
 
 document.getElementById("sellForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!selectedItem) return Utils.toast("Choose a brand first", "error");
   const quantitySold = Number(document.querySelector('[name="quantitySold"]').value);
+  const paymentMethod = document.querySelector('[name="paymentMethod"]').value;
   try {
-    const res = await Utils.api("/bar/sell", { method: "POST", body: { itemId: selectedItem.id, quantitySold } });
+    const res = await Utils.api("/bar/sell", { method: "POST", body: { itemId: selectedItem.id, quantitySold, paymentMethod } });
     Utils.toast(`Sale recorded — ${Utils.formatMoney(res.total)}`, "success");
     e.target.reset();
     document.getElementById("brandSelect").innerHTML = `<option value="">Choose a category first…</option>`;

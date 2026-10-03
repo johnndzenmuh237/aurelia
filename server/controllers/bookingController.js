@@ -16,7 +16,6 @@ async function checkAvailability(req, res, next) {
   } catch (err) { next(err); }
 }
 
-<<<<<<< HEAD
 /**
  * Public "track my booking" lookup — since guests never create accounts
  * or log in, this is how they check their reservation/folio status:
@@ -44,8 +43,6 @@ async function lookupBooking(req, res, next) {
   } catch (err) { next(err); }
 }
 
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 /** Handles both the price-preview call (GET-style query params, ?preview=1)
  * and the real POST that creates the reservation — kept in one handler
  * since the booking page calls the same path for both. */
@@ -62,8 +59,4 @@ async function create(req, res, next) {
   } catch (err) { next(err); }
 }
 
-<<<<<<< HEAD
 module.exports = { checkAvailability, create, lookupBooking };
-=======
-module.exports = { checkAvailability, create };
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5

@@ -2,10 +2,7 @@ const { db } = require("../config/firebase");
 const { genericCrud } = require("../services/genericCrud");
 const { findAvailableRooms } = require("../services/availabilityService");
 const { completeHousekeeping } = require("../services/housekeepingService");
-<<<<<<< HEAD
 const { logAction } = require("../utils/audit");
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 const { ApiError } = require("../utils/errors");
 
 const reservationsCrud = genericCrud("reservations");
@@ -17,10 +14,7 @@ async function updateReservation(req, res, next) {
   try {
     const { id, ...data } = req.body;
     const result = await reservationsCrud.update(id, data, req.user?.uid);
-<<<<<<< HEAD
     await logAction({ user: req.user || null, action: "Booking modified", entity: "reservations", entityId: id, newValue: data });
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     res.json(result);
   } catch (err) { next(err); }
 }
@@ -28,10 +22,7 @@ async function deleteReservationHandler(req, res, next) {
   try {
     const { id } = req.body;
     await db.collection("reservations").doc(id).update({ status: "Cancelled" });
-<<<<<<< HEAD
     await logAction({ user: req.user || null, action: "Reservation cancelled", entity: "reservations", entityId: id });
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     res.json({ ok: true });
   } catch (err) { next(err); }
 }

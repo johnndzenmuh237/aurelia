@@ -5,10 +5,7 @@ const { generatePaymentRef } = require("../utils/idGenerator");
 const { balanceOf } = require("../utils/calculations");
 const { logAction } = require("../utils/audit");
 const { notifyPaymentReceived } = require("./notificationService");
-<<<<<<< HEAD
 const { notifyReceptionistOfPaidBooking } = require("./whatsappService");
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 /**
  * Initiates a Mobile Money charge and creates a `pending` payment record.
@@ -17,18 +14,11 @@ const { notifyReceptionistOfPaidBooking } = require("./whatsappService");
  * transaction really succeeded. This is spec §20's core rule: never trust
  * the frontend response alone.
  */
-<<<<<<< HEAD
 async function initiatePayment({ reservationId, amount, provider, phone, uid, orderType = "reservation" }) {
   const collectionName = orderType === "delivery" ? "orders" : "reservations";
   const resRef = db.collection(collectionName).doc(reservationId);
   const resSnap = await resRef.get();
   if (!resSnap.exists) throw new ApiError(404, orderType === "delivery" ? "Order not found." : "Reservation not found.");
-=======
-async function initiatePayment({ reservationId, amount, provider, phone, uid }) {
-  const resRef = db.collection("reservations").doc(reservationId);
-  const resSnap = await resRef.get();
-  if (!resSnap.exists) throw new ApiError(404, "Reservation not found.");
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const reservation = resSnap.data();
 
   const paymentRef = await generatePaymentRef();
@@ -37,19 +27,11 @@ async function initiatePayment({ reservationId, amount, provider, phone, uid }) 
 
   let providerResponse;
   if (provider === "mtn_momo") {
-<<<<<<< HEAD
     providerResponse = await mtnMomo.requestToPay({ amount, phone, externalId, payerMessage: `Payment for ${reservation.reservationCode || reservation.orderNumber}` });
   } else if (provider === "orange_money") {
     providerResponse = await orangeMoney.requestToPay({
       amount, phone, externalId,
       returnUrl: `${process.env.PUBLIC_APP_URL || ""}/booking-success.html?ref=${reservation.reservationCode || reservation.orderNumber}`,
-=======
-    providerResponse = await mtnMomo.requestToPay({ amount, phone, externalId, payerMessage: `Deposit for ${reservation.reservationCode}` });
-  } else if (provider === "orange_money") {
-    providerResponse = await orangeMoney.requestToPay({
-      amount, phone, externalId,
-      returnUrl: `${process.env.PUBLIC_APP_URL || ""}/booking-success.html?ref=${reservation.reservationCode}`,
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       cancelUrl: `${process.env.PUBLIC_APP_URL || ""}/booking.html`,
     });
   } else {
@@ -57,13 +39,8 @@ async function initiatePayment({ reservationId, amount, provider, phone, uid }) 
   }
 
   await paymentDocRef.set({
-<<<<<<< HEAD
     paymentRef, reservationId, orderType, guestUid: uid || reservation.guestUid || null,
     guestName: reservation.guestName || reservation.fullName, amount, currency: "XAF", method: provider,
-=======
-    paymentRef, reservationId, guestUid: uid || reservation.guestUid || null,
-    guestName: reservation.guestName, amount, currency: "XAF", method: provider,
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     status: "pending", providerExternalId: externalId,
     providerReference: providerResponse.referenceId || providerResponse.payToken || null,
     createdAt: FieldValue.serverTimestamp(), createdBy: uid || "guest",
@@ -95,7 +72,6 @@ async function confirmPayment({ paymentId, providerStatus }) {
 
   await paymentRef.update({ status: "confirmed", confirmedAt: FieldValue.serverTimestamp(), providerStatus });
 
-<<<<<<< HEAD
   if (payment.orderType === "delivery") {
     // Food-delivery order: mark paid and hand off to restaurant staff — no
     // folio/reservation balance math involved (spec §12: food delivery).
@@ -110,8 +86,6 @@ async function confirmPayment({ paymentId, providerStatus }) {
     return { confirmed: true };
   }
 
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   const resRef = db.collection("reservations").doc(payment.reservationId);
   await db.runTransaction(async (tx) => {
     const resSnap = await tx.get(resRef);
@@ -136,7 +110,6 @@ async function confirmPayment({ paymentId, providerStatus }) {
   await logAction({ user: null, action: "Payment confirmed", entity: "payments", entityId: paymentId, newValue: payment.amount });
   await notifyPaymentReceived({ reservationId: payment.reservationId, amount: payment.amount, paymentRef: payment.paymentRef });
 
-<<<<<<< HEAD
   // Receptionist/manager WhatsApp + dashboard notification for the newly
   // paid room booking (spec §8-9). Re-reads the reservation for its
   // current room/dates rather than trusting the pre-payment snapshot,
@@ -152,8 +125,6 @@ async function confirmPayment({ paymentId, providerStatus }) {
     });
   }
 
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   return { confirmed: true };
 }
 
@@ -173,4 +144,106 @@ async function refundPayment({ paymentId, amount, reason, authorizedByUid }) {
   return { refundId: refundRef.id };
 }
 
-module.exports = { initiatePayment, confirmPayment, refundPayment };
+// ==================== Manual Mobile Money confirmation ====================
+// Real MTN/Orange merchant API access (initiatePayment above) requires a
+// business merchant account and API approval that most small hotels won't
+// have on day one. This is the WORKING fallback used in production until
+// that's set up: the guest sends money directly to the hotel's published
+// MTN/Orange number, types in the transaction ID their provider's SMS/app
+// gave them, and a staff member manually checks that ID against the
+// hotel's own phone/MTN dashboard before confirming — same manual-review
+// pattern used for other manually-verified payment flows, just applied
+// here to room bookings. Nothing above (initiatePayment/confirmPayment/
+// refundPayment) is touched; this is purely additive.
+
+/** Normalizes a transaction ID for duplicate checking — same ID typed
+ * with different casing/spacing is still the same transaction. */
+function normalizeTxId(raw) {
+  return String(raw || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+/**
+ * Guest submits their transaction ID after sending money manually. This
+ * does NOT confirm the payment — it only records the claim as
+ * `pending_manual_review` for a staff member to check and confirm (see
+ * confirmManualPayment below). Duplicate protection mirrors the
+ * `usedReferences`-as-document-id trick: the normalized transaction ID is
+ * the id of a doc in `paymentReferences`, created in the SAME transaction
+ * as the payment record, so Firestore itself — not just a client check —
+ * rejects a transaction ID that's already been used, even for a
+ * different reservation.
+ */
+async function submitManualPayment({ reservationId, orderType = "reservation", amount, provider, transactionId, senderPhone, uid }) {
+  if (!reservationId || !amount || !provider || !transactionId) {
+    throw new ApiError(400, "reservationId, amount, provider and transactionId are required.");
+  }
+  if (!["mtn_momo", "orange_money"].includes(provider)) throw new ApiError(400, "provider must be mtn_momo or orange_money.");
+  const normalized = normalizeTxId(transactionId);
+  if (normalized.length < 4) throw new ApiError(400, "Please enter a valid transaction ID.");
+
+  const collectionName = orderType === "delivery" ? "orders" : "reservations";
+  const resRef = db.collection(collectionName).doc(reservationId);
+  const paymentRef = db.collection("payments").doc();
+  const refRef = db.collection("paymentReferences").doc(normalized);
+  const paymentRefCode = await generatePaymentRef();
+
+  await db.runTransaction(async (tx) => {
+    const resSnap = await tx.get(resRef);
+    if (!resSnap.exists) throw new ApiError(404, orderType === "delivery" ? "Order not found." : "Reservation not found.");
+    const refSnap = await tx.get(refRef);
+    if (refSnap.exists) throw new ApiError(409, "This transaction ID has already been submitted. Please check the ID or contact us if you believe this is an error.");
+    const reservation = resSnap.data();
+
+    tx.set(refRef, { paymentId: paymentRef.id, reservationId, createdAt: FieldValue.serverTimestamp() });
+    tx.set(paymentRef, {
+      paymentRef: paymentRefCode, reservationId, orderType, guestUid: uid || reservation.guestUid || null,
+      guestName: reservation.guestName || reservation.fullName, amount: Number(amount), currency: "XAF",
+      method: provider, status: "pending_manual_review",
+      transactionId, senderPhone: senderPhone || null, manualSubmission: true,
+      createdAt: FieldValue.serverTimestamp(), createdBy: uid || "guest",
+    });
+  });
+
+  await logAction({ user: null, action: "Manual payment submitted (awaiting staff confirmation)", entity: "payments", entityId: paymentRef.id, newValue: { reservationId, amount, transactionId } });
+  return { paymentId: paymentRef.id, paymentRef: paymentRefCode, status: "pending_manual_review" };
+}
+
+/** Staff confirms a manually-submitted payment after checking the
+ * transaction ID against the hotel's own MTN/Orange account — reuses
+ * the exact same confirmPayment() finalize logic as the webhook path
+ * (folio update, WhatsApp notification, etc.), so there is only ONE
+ * code path that actually marks a reservation paid, regardless of how
+ * the payment was verified. */
+async function confirmManualPayment({ paymentId, uid, userName }) {
+  const paymentSnap = await db.collection("payments").doc(paymentId).get();
+  if (!paymentSnap.exists) throw new ApiError(404, "Payment not found.");
+  const payment = paymentSnap.data();
+  if (payment.status !== "pending_manual_review") {
+    throw new ApiError(409, `This payment is not awaiting manual confirmation (current status: ${payment.status}).`);
+  }
+  const result = await confirmPayment({ paymentId, providerStatus: "SUCCESSFUL" });
+  await logAction({ user: { uid, name: userName }, action: "Manual payment confirmed by staff", entity: "payments", entityId: paymentId, newValue: payment.amount });
+  return result;
+}
+
+async function rejectManualPayment({ paymentId, reason, uid, userName }) {
+  const paymentRef = db.collection("payments").doc(paymentId);
+  const paymentSnap = await paymentRef.get();
+  if (!paymentSnap.exists) throw new ApiError(404, "Payment not found.");
+  if (paymentSnap.data().status !== "pending_manual_review") {
+    throw new ApiError(409, "This payment is not awaiting manual confirmation.");
+  }
+  await paymentRef.update({ status: "rejected", rejectionReason: reason || null });
+  await logAction({ user: { uid, name: userName }, action: "Manual payment rejected", entity: "payments", entityId: paymentId, newValue: reason });
+  return { paymentId, status: "rejected" };
+}
+
+async function listPendingManualPayments() {
+  const snap = await db.collection("payments").where("status", "==", "pending_manual_review").get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+module.exports = {
+  initiatePayment, confirmPayment, refundPayment,
+  submitManualPayment, confirmManualPayment, rejectManualPayment, listPendingManualPayments,
+};

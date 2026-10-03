@@ -48,14 +48,11 @@
       <button data-cat="Drinks">Drinks</button>
       <button data-cat="Desserts">Desserts</button>
     </div>
-<<<<<<< HEAD
     <div class="category-tabs" id="dayTabs" style="display:none">
       <span class="muted" style="align-self:center; font-size:.82rem; margin-right:4px">Day:</span>
       <button data-day="Monday">Mon</button><button data-day="Tuesday">Tue</button><button data-day="Wednesday">Wed</button>
       <button data-day="Thursday">Thu</button><button data-day="Friday">Fri</button><button data-day="Saturday">Sat</button><button data-day="Sunday">Sun</button>
     </div>
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     <div class="menu-grid" id="menuGrid">
       <div class="skeleton" style="height:260px"></div>
       <div class="skeleton" style="height:260px"></div>
@@ -88,15 +85,11 @@
 <script src="/js/auth.js"></script>
 <script src="/js/layout.js"></script>
 <script>
-<<<<<<< HEAD
 const DAY_CATEGORIES = ["Breakfast", "Lunch", "Dinner"];
 const TODAY = new Date().toLocaleDateString("en-US", { weekday: "long" });
 let allDishes = [];
 let activeDay = TODAY;
 
-=======
-let allDishes = [];
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 document.addEventListener("firebase-ready", load);
 if (window.firebaseDb) load();
 function load() {
@@ -107,7 +100,6 @@ function load() {
   });
 }
 function render(cat) {
-<<<<<<< HEAD
   const dayTabs = document.getElementById("dayTabs");
   dayTabs.style.display = DAY_CATEGORIES.includes(cat) ? "flex" : "none";
   dayTabs.querySelectorAll("[data-day]").forEach((b) => b.classList.toggle("active", b.dataset.day === activeDay));
@@ -120,37 +112,23 @@ function render(cat) {
   if (DAY_CATEGORIES.includes(cat)) {
     dishes = dishes.filter((d) => !d.day || d.day === activeDay);
   }
-=======
-  const grid = document.getElementById("menuGrid");
-  const dishes = cat === "all" ? allDishes : allDishes.filter((d) => d.category === cat);
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   grid.innerHTML = dishes.length ? dishes.map((d) => `
     <div class="card dish-card">
       <img src="${d.photoUrl || `https://picsum.photos/seed/dish-${encodeURIComponent(d.name)}/500/400`}" alt="${d.name}" loading="lazy">
       <div class="dish-card-body">
-<<<<<<< HEAD
         <span class="eyebrow">${d.category}${d.day ? ` · ${d.day}` : ""}</span>
-=======
-        <span class="eyebrow">${d.category}</span>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         <h3 style="margin:4px 0 6px">${d.name}</h3>
         <p class="muted" style="font-size:.86rem">${d.description || ""}</p>
         <div class="dish-price">${Utils.formatMoney(d.price)}</div>
       </div>
-<<<<<<< HEAD
     </div>`).join("") : `<div class="empty-state" style="grid-column:1/-1">${DAY_CATEGORIES.includes(cat) ? `No ${cat.toLowerCase()} dishes set for ${activeDay} yet.` : "Menu items will appear here once added in the admin panel (Restaurant → Menu)."}</div>`;
 }
 let activeCat = "all";
-=======
-    </div>`).join("") : `<div class="empty-state" style="grid-column:1/-1">Menu items will appear here once added in the admin panel (Restaurant → Menu).</div>`;
-}
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 document.getElementById("categoryTabs").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-cat]");
   if (!btn) return;
   document.querySelectorAll("#categoryTabs button").forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
-<<<<<<< HEAD
   activeCat = btn.dataset.cat;
   render(activeCat);
 });
@@ -159,9 +137,6 @@ document.getElementById("dayTabs").addEventListener("click", (e) => {
   if (!btn) return;
   activeDay = btn.dataset.day;
   render(activeCat);
-=======
-  render(btn.dataset.cat);
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 });
 </script>
 </body>

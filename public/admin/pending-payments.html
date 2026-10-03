@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Manual Payments · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Pending Manual Payments" data-roles="super_admin,manager,accountant,front_desk">
+  <div id="admin-content">
+    <div class="panel" style="padding:16px; margin-bottom:16px;">
+      <p class="muted" style="margin:0;">Guests who paid by Mobile Money and submitted their transaction ID appear
+        here. Check that ID against the hotel's own MTN/Orange account before confirming — confirming here
+        immediately marks the reservation paid and notifies the receptionist/manager, the same as any other
+        payment confirmation.</p>
+    </div>
+    <div class="panel">
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Submitted</th><th>Guest</th><th>Method</th><th>Amount</th><th>Transaction ID</th><th>Sender Phone</th><th></th></tr></thead>
+        <tbody id="pendingBody"><tr><td colspan="7"><div class="empty-state">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+async function load() {
+  try {
+    const { items } = await Utils.api("/payments/pending-manual");
+    render(items);
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+
+function render(items) {
+  const body = document.getElementById("pendingBody");
+  body.innerHTML = items.length ? items.map((p) => `
+    <tr>
+      <td>${Utils.formatDate(p.createdAt)}</td>
+      <td>${p.guestName || "—"}</td>
+      <td>${p.method === "mtn_momo" ? "MTN Mobile Money" : "Orange Money"}</td>
+      <td>${Utils.formatMoney(p.amount)}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${p.transactionId}</td>
+      <td>${p.senderPhone || "—"}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" data-confirm="${p.id}">Confirm</button>
+        <button class="btn btn-ghost btn-sm" data-reject="${p.id}">Reject</button>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No payments awaiting confirmation.</div></td></tr>`;
+
+  body.querySelectorAll("[data-confirm]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm("Confirm this payment? This immediately marks the reservation as paid.")) return;
+    try { await Utils.api("/payments/manual-confirm", { method: "POST", body: { paymentId: b.dataset.confirm } }); Utils.toast("Payment confirmed", "success"); load(); }
+    catch (err) { Utils.toast(err.message, "error"); }
+  }));
+  body.querySelectorAll("[data-reject]").forEach((b) => b.addEventListener("click", async () => {
+    const reason = prompt("Reason for rejecting this payment (shown in the audit log):");
+    if (reason === null) return;
+    try { await Utils.api("/payments/manual-reject", { method: "POST", body: { paymentId: b.dataset.reject, reason } }); Utils.toast("Payment rejected", "success"); load(); }
+    catch (err) { Utils.toast(err.message, "error"); }
+  }));
+}
+
+load();
+setInterval(load, 30000); // light polling — this list changes rarely but staff shouldn't have to refresh manually
+</script>
+</body>
+</html>

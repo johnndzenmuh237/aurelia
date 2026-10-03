@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bar Dashboard · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div id="admin-shell" data-title="Bar Dashboard" data-roles="super_admin,manager,restaurant">
+  <div id="admin-content">
+    <div class="stat-grid" id="statGrid">
+      <div class="stat-card stat-alt"><div class="stat-label">Stock Value</div><div class="stat-value" id="sStockValue">–</div></div>
+      <div class="stat-card"><div class="stat-label">Expected Revenue (Current Stock)</div><div class="stat-value" id="sExpectedRevenue">–</div></div>
+      <div class="stat-card"><div class="stat-label">Today's Sales</div><div class="stat-value" id="sTodaySales">–</div></div>
+      <div class="stat-card"><div class="stat-label">Today's Profit</div><div class="stat-value" id="sTodayProfit">–</div></div>
+      <div class="stat-card"><div class="stat-label">Bottles Sold Today</div><div class="stat-value" id="sTodayBottles">–</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly Sales</div><div class="stat-value" id="sMonthSales">–</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly Profit</div><div class="stat-value" id="sMonthProfit">–</div></div>
+      <div class="stat-card stat-warn"><div class="stat-label">Low / Out of Stock</div><div class="stat-value" id="sStockAlerts">–</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Low Stock / Out of Stock</h3></div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Drink</th><th>Status</th></tr></thead>
+        <tbody id="alertsBody"><tr><td colspan="2"><div class="empty-state">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Seller Performance</h3>
+        <div style="display:flex; gap:8px;">
+          <input type="date" id="perfFrom"><input type="date" id="perfTo">
+          <button class="btn btn-ghost btn-sm" id="perfFilterBtn">Filter</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Seller</th><th>Transactions</th><th>Bottles Sold</th><th>Revenue</th></tr></thead>
+        <tbody id="perfBody"><tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+async function loadDashboard() {
+  try {
+    const d = await Utils.api("/bar/dashboard");
+    document.getElementById("sStockValue").textContent = Utils.formatMoney(d.stockValue);
+    document.getElementById("sExpectedRevenue").textContent = Utils.formatMoney(d.expectedRevenue);
+    document.getElementById("sTodaySales").textContent = Utils.formatMoney(d.today.sales);
+    document.getElementById("sTodayProfit").textContent = Utils.formatMoney(d.today.profit);
+    document.getElementById("sTodayBottles").textContent = d.today.bottlesSold;
+    document.getElementById("sMonthSales").textContent = Utils.formatMoney(d.month.sales);
+    document.getElementById("sMonthProfit").textContent = Utils.formatMoney(d.month.profit);
+    document.getElementById("sStockAlerts").textContent = `${d.lowStockCount} low · ${d.outOfStockCount} out`;
+
+    const rows = [
+      ...d.lowStockItems.map((i) => `<tr><td>${i.brand} (${i.stockLabel})</td><td><span class="chip chip-dirty">LOW STOCK</span></td></tr>`),
+      ...d.outOfStockItems.map((i) => `<tr><td>${i.brand}</td><td><span class="chip chip-dirty">OUT OF STOCK</span></td></tr>`),
+    ];
+    document.getElementById("alertsBody").innerHTML = rows.length ? rows.join("") : `<tr><td colspan="2"><div class="empty-state">Everything is well stocked.</div></td></tr>`;
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+
+async function loadPerformance() {
+  const from = document.getElementById("perfFrom").value;
+  const to = document.getElementById("perfTo").value;
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  try {
+    const { items } = await Utils.api(`/bar/seller-performance${params.toString() ? "?" + params.toString() : ""}`);
+    document.getElementById("perfBody").innerHTML = items.length
+      ? items.map((p) => `<tr><td>${p.sellerName}</td><td>${p.transactions}</td><td>${p.bottlesSold}</td><td>${Utils.formatMoney(p.revenue)}</td></tr>`).join("")
+      : `<tr><td colspan="4"><div class="empty-state">No sales yet.</div></td></tr>`;
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+document.getElementById("perfFilterBtn").addEventListener("click", loadPerformance);
+
+loadDashboard();
+loadPerformance();
+setInterval(loadDashboard, 30000);
+</script>
+</body>
+</html>

@@ -183,7 +183,41 @@ git commit -m "your message"
 git push
 ```
 
-## Part 6 — Deploy (Vercel + Firebase)
+## Part 6 — Deploy on Render (alternative to Vercel)
+
+Render hosts this as a normal long-running Node web service (not
+serverless), so `vercel.json`/`api/index.js` are irrelevant here — Render
+just runs `server/server.js` directly.
+
+**New Web Service settings:**
+| Setting | Value |
+|---|---|
+| Root Directory | the folder containing `package.json` (leave blank if your GitHub repo root **is** this project; set to `aurelia` if it's nested one level under a monorepo root) |
+| Runtime | Node |
+| Build Command | `npm install` |
+| Start Command | `npm start` |
+| Node version | 18+ (matches `"engines"` in `package.json` — set `NODE_VERSION` env var if Render doesn't pick it up automatically) |
+
+**Environment variables** (Render dashboard → your service → Environment):
+add every variable from `.env.example`, same as the Vercel step below.
+Two Render-specific gotchas:
+
+- `FIREBASE_PRIVATE_KEY` — paste it as **one line with literal `\n`
+  sequences** (copy it straight out of your `.env` file, not the raw
+  multi-line PEM from the downloaded JSON). The code un-escapes `\n`
+  itself (`server/config/environment.js`); if you paste a real multi-line
+  block instead, parsing fails and the app crashes on boot.
+- Don't set `PORT` yourself — Render injects it, and the app already
+  reads `process.env.PORT`.
+
+**After the first deploy, check the Logs tab, not just the dashboard
+status.** A "deploy failed" banner with no further detail almost always
+means the process crashed on boot — the actual reason (usually a missing
+env var, printed by `server/config/environment.js`'s `required()` helper,
+or a firebase-admin credential error) is in the log right after
+`"Aurelia Hotel API listening on..."` fails to appear.
+
+## Part 7 — Deploy (Vercel + Firebase)
 
 Full detail in `docs/deployment.md` — summary:
 

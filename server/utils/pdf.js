@@ -36,7 +36,6 @@ function renderInvoicePdf({ invoiceNumber, guestName, room, checkIn, checkOut, i
   });
 }
 
-<<<<<<< HEAD
 module.exports = { renderInvoicePdf, renderTablePdf };
 
 /**
@@ -77,6 +76,3 @@ function renderTablePdf({ title, summary, columns, rows }) {
     doc.end();
   });
 }
-=======
-module.exports = { renderInvoicePdf };
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5

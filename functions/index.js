@@ -21,10 +21,7 @@ const roomStatusAutomation = require("./roomStatusAutomation");
 const paymentAutomation = require("./paymentAutomation");
 const housekeepingAutomation = require("./housekeepingAutomation");
 const employeeAutomation = require("./employeeAutomation");
-<<<<<<< HEAD
 const attendanceAutomation = require("./attendanceAutomation");
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 const paymentWebhook = require("./paymentWebhook");
 
 module.exports = {
@@ -33,9 +30,6 @@ module.exports = {
   ...paymentAutomation,
   ...housekeepingAutomation,
   ...employeeAutomation,
-<<<<<<< HEAD
   ...attendanceAutomation,
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   ...paymentWebhook,
 };

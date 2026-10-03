@@ -3,11 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
 <title>Manager Dashboard · Aurelia PMS Admin</title>
-=======
-<title>Dashboard · Aurelia PMS Admin</title>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -15,7 +11,6 @@
 <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-<<<<<<< HEAD
 <div id="admin-shell" data-title="Manager Dashboard" data-roles="super_admin,manager,front_desk,accountant">
   <div id="admin-content">
 
@@ -56,20 +51,6 @@
         <div class="panel-head"><h3>AI Business Insights</h3><a href="/admin/ai-insights.html" class="btn btn-ghost btn-sm">See all →</a></div>
         <div class="panel-body"><div id="insightsPreview"><div class="empty-state">Loading…</div></div></div>
       </div>
-=======
-<div id="admin-shell" data-title="Dashboard" data-roles="super_admin,manager,front_desk,accountant">
-  <div id="admin-content">
-
-    <div class="stat-grid" id="statGrid">
-      <div class="stat-card"><div class="stat-label">Total Rooms</div><div class="stat-value" id="statTotalRooms">–</div></div>
-      <div class="stat-card"><div class="stat-label">Occupied</div><div class="stat-value" id="statOccupied">–</div></div>
-      <div class="stat-card"><div class="stat-label">Available</div><div class="stat-value" id="statAvailable">–</div></div>
-      <div class="stat-card"><div class="stat-label">Occupancy</div><div class="stat-value" id="statOccupancy">–</div></div>
-      <div class="stat-card"><div class="stat-label">Today's Revenue</div><div class="stat-value" id="statRevToday">–</div></div>
-      <div class="stat-card"><div class="stat-label">Monthly Revenue</div><div class="stat-value" id="statRevMonth">–</div></div>
-      <div class="stat-card"><div class="stat-label">Outstanding Balance</div><div class="stat-value" id="statOutstanding">–</div></div>
-      <div class="stat-card"><div class="stat-label">Staff Present Today</div><div class="stat-value" id="statStaffPresent">–</div></div>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     </div>
 
     <div class="grid" style="grid-template-columns:1fr 1fr; align-items:start">
@@ -90,11 +71,7 @@
     </div>
 
     <div class="panel">
-<<<<<<< HEAD
       <div class="panel-head"><h3>Room &amp; Apartment Status Overview</h3><a href="/admin/room-status.html" class="btn btn-ghost btn-sm">Full board →</a></div>
-=======
-      <div class="panel-head"><h3>Room Status Overview</h3><a href="/admin/room-status.html" class="btn btn-ghost btn-sm">Full board →</a></div>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       <div class="panel-body">
         <div class="room-board" id="roomBoardPreview"><div class="empty-state">Loading rooms…</div></div>
       </div>
@@ -103,10 +80,7 @@
   </div>
 </div>
 
-<<<<<<< HEAD
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 <script src="/js/config.js"></script>
 <script type="module" src="/js/firebase.js"></script>
 <script src="/js/utils.js"></script>
@@ -114,23 +88,16 @@
 <script src="/js/admin-nav-data.js"></script>
 <script src="/js/admin-layout.js"></script>
 <script>
-<<<<<<< HEAD
 /* Every number on this dashboard is derived from live data — nothing here
    is hard-coded (spec §21-22, §44). Rooms/roomTypes still read directly
    from Firestore (they're intentionally public); everything else reads
    through the authenticated staff data API and polls every 8s, since
    Firestore rules can no longer gate direct client reads without
    Firebase Auth — see server/controllers/dataController.js. */
-=======
-/* All numbers on this dashboard are derived from live Firestore reads —
-   nothing here is hard-coded (spec §44/§82). If a collection is empty
-   (fresh install) cards correctly show 0, not a placeholder number. */
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 document.addEventListener("firebase-ready", loadDashboard);
 if (window.firebaseDb) loadDashboard();
 
 async function loadDashboard() {
-<<<<<<< HEAD
   const { collection, onSnapshot } = window.fb;
   const db = window.firebaseDb;
 
@@ -288,69 +255,6 @@ async function loadDashboard() {
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
     });
   }
-=======
-  const { collection, query, where, onSnapshot } = window.fb;
-  const db = window.firebaseDb;
-
-  onSnapshot(collection(db, "rooms"), (snap) => {
-    const rooms = snap.docs.map((d) => d.data());
-    const total = rooms.length;
-    const occupied = rooms.filter((r) => r.status === "occupied").length;
-    const available = rooms.filter((r) => r.status === "available").length;
-    document.getElementById("statTotalRooms").textContent = total;
-    document.getElementById("statOccupied").textContent = occupied;
-    document.getElementById("statAvailable").textContent = available;
-    document.getElementById("statOccupancy").textContent = total ? `${((occupied / total) * 100).toFixed(1)}%` : "0%";
-
-    const board = document.getElementById("roomBoardPreview");
-    board.innerHTML = rooms.length
-      ? rooms.slice(0, 24).map((r) => `<div class="room-tile"><div class="rnum">${r.number}</div>${Utils.statusChip(r.status || "available").outerHTML}</div>`).join("")
-      : `<div class="empty-state">No rooms yet. Add rooms from Rooms → All Rooms.</div>`;
-  });
-
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-
-  onSnapshot(query(collection(db, "reservations"), where("checkIn", ">=", todayStart.toISOString().slice(0, 10)), where("checkIn", "<=", todayEnd.toISOString().slice(0, 10))), (snap) => {
-    const rows = snap.docs.map((d) => d.data());
-    const body = document.getElementById("arrivalsBody");
-    body.innerHTML = rows.length
-      ? rows.map((r) => `<tr><td>${r.guestName || "—"}</td><td>${r.room || "—"}</td><td>${r.checkInTime || "—"}</td><td>${Utils.statusChip(r.status || "pending").outerHTML}</td></tr>`).join("")
-      : `<tr><td colspan="4"><div class="empty-state">No arrivals scheduled for today.</div></td></tr>`;
-  });
-
-  onSnapshot(query(collection(db, "reservations"), where("checkOut", ">=", todayStart.toISOString().slice(0, 10)), where("checkOut", "<=", todayEnd.toISOString().slice(0, 10))), (snap) => {
-    const rows = snap.docs.map((d) => d.data());
-    const body = document.getElementById("departuresBody");
-    body.innerHTML = rows.length
-      ? rows.map((r) => `<tr><td>${r.guestName || "—"}</td><td>${r.room || "—"}</td><td>${Utils.formatMoney(r.balance)}</td><td>${Utils.statusChip(r.status || "pending").outerHTML}</td></tr>`).join("")
-      : `<tr><td colspan="4"><div class="empty-state">No departures scheduled for today.</div></td></tr>`;
-  });
-
-  onSnapshot(collection(db, "payments"), (snap) => {
-    let today = 0, month = 0;
-    const now = new Date();
-    snap.docs.forEach((d) => {
-      const p = d.data();
-      const created = p.createdAt?.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
-      if (isNaN(created)) return;
-      if (created.toDateString() === now.toDateString()) today += Number(p.amount || 0);
-      if (created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()) month += Number(p.amount || 0);
-    });
-    document.getElementById("statRevToday").textContent = Utils.formatMoney(today);
-    document.getElementById("statRevMonth").textContent = Utils.formatMoney(month);
-  });
-
-  onSnapshot(collection(db, "invoices"), (snap) => {
-    const outstanding = snap.docs.reduce((sum, d) => sum + Number(d.data().balance || 0), 0);
-    document.getElementById("statOutstanding").textContent = Utils.formatMoney(outstanding);
-  });
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  onSnapshot(query(collection(db, "employeeAttendance"), where("date", "==", todayStr), where("status", "==", "present")), (snap) => {
-    document.getElementById("statStaffPresent").textContent = snap.size;
-  });
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 }
 </script>
 </body>

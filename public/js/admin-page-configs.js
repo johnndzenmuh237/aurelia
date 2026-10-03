@@ -10,20 +10,12 @@ window.ADMIN_PAGES = {
   "rooms": {
     collection: "rooms", title: "All Rooms", idPrefix: "room",
     columns: [
-<<<<<<< HEAD
       { key: "displayNumber", label: "Room / Apartment" }, { key: "type", label: "Type" },
-=======
-      { key: "number", label: "Room #" }, { key: "type", label: "Type" },
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       { key: "floor", label: "Floor" }, { key: "building", label: "Building" },
       { key: "capacity", label: "Capacity" }, { key: "rate", label: "Rate", money: true },
       { key: "status", label: "Status", chip: true },
     ],
-<<<<<<< HEAD
     createFields: ["number", "displayNumber", "type", "floor", "building", "capacity", "rate"],
-=======
-    createFields: ["number", "type", "floor", "building", "capacity", "rate"],
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     apiCreate: "/rooms/create", apiUpdate: "/rooms/update",
   },
   "room-types": {
@@ -77,13 +69,8 @@ window.ADMIN_PAGES = {
     columns: [{ key: "table", label: "Table" }, { key: "guestName", label: "Guest / Room" }, { key: "total", label: "Total", money: true }, { key: "status", label: "Status", chip: true }, { key: "createdAt", label: "Time", date: true }],
   },
   "restaurant-menu": { collection: "menuItems", title: "Menu Items", idPrefix: "menu",
-<<<<<<< HEAD
     columns: [{ key: "name", label: "Item" }, { key: "category", label: "Category" }, { key: "day", label: "Day (if rotating)" }, { key: "price", label: "Price", money: true }, { key: "available", label: "Available", chip: true }],
     createFields: ["name", "category", "day", "description", "price", "photoUrl"], apiCreate: "/restaurant/menu", apiUpdate: "/restaurant/menu",
-=======
-    columns: [{ key: "name", label: "Item" }, { key: "category", label: "Category" }, { key: "price", label: "Price", money: true }, { key: "available", label: "Available", chip: true }],
-    createFields: ["name", "category", "price"], apiCreate: "/restaurant/menu", apiUpdate: "/restaurant/menu",
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   },
   "restaurant-tables": { collection: "restaurantTables", title: "Tables", idPrefix: "tbl",
     columns: [{ key: "label", label: "Table" }, { key: "capacity", label: "Seats" }, { key: "status", label: "Status", chip: true }],
@@ -128,7 +115,7 @@ window.ADMIN_PAGES = {
   },
   "departments": { collection: "departments", title: "Departments", idPrefix: "dept",
     columns: [{ key: "name", label: "Department" }, { key: "headCount", label: "Head Count" }],
-    createFields: ["name"], apiCreate: "/employees/update", apiUpdate: "/employees/update",
+    createFields: ["name"], apiCreate: "/departments", apiUpdate: "/departments",
   },
   "positions": { collection: "positions", title: "Positions", idPrefix: "pos",
     columns: [{ key: "title", label: "Title" }, { key: "department", label: "Department" }, { key: "baseSalary", label: "Base Salary", money: true }],

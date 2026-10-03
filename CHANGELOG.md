@@ -1,4 +1,93 @@
-<<<<<<< HEAD
+# CHANGELOG — Bar Management Upgrade & Manual Mobile Money Confirmation
+
+Third additive pass. Two unrelated things landed together because they
+were asked for together:
+
+## Added — Bar management (full bar-spec feature set, integrated into
+## Aurelia's EXISTING bar module rather than built as a separate system)
+
+- **Universal container-based inventory engine** (`computeDrinkFigures()`
+  in `server/utils/calculations.js`): works for any drink/container type
+  with no per-category hardcoded math. Fully backward-compatible — a
+  bar item created the original simple way (just quantity + unitPrice)
+  keeps working unchanged; the richer fields are opt-in per item.
+- **Configurable drink categories** (`barCategories`,
+  `GET/POST /api/bar/categories`), replacing the old hardcoded 4-category
+  list, auto-seeded with the bar spec's 8 defaults.
+- **Restocking & stock adjustment** (`POST /api/bar/restock`,
+  `POST /api/bar/adjust`): both transactional, both permanently logged
+  (`barInventoryTransactions`, `barStockAdjustments`) with who/when/
+  reason — stock can never go negative and is never silently edited.
+- **Fast-sell POS screen**: new `public/admin/bar-pos.html` — category
+  tabs, large drink tiles, +1/+2/+5/custom quantity, one SELL button,
+  payment-method selector. The original dropdown-based
+  `public/admin/bar-sales.html` form still works too (now with dynamic
+  categories + payment method added) — nothing was removed.
+- **Bar financial dashboard & seller performance**:
+  `GET /api/bar/dashboard`, `GET /api/bar/seller-performance`.
+- **Historical accuracy**: every bar sale now snapshots `unitCostAtSale`
+  and `paymentMethod`; a later price/cost edit never rewrites a past
+  sale's recorded profit (same principle as room-booking payments).
+- Upgraded `public/admin/bar-inventory.html`: category management,
+  container/cost fields in the Add/Edit dialog, Restock/Adjust row
+  actions, live stock-status badges.
+- Fixed a stale wiring bug found while doing this: the Departments admin
+  page (`public/js/admin-page-configs.js`) was still pointing at a
+  placeholder `/employees/update` endpoint instead of the real
+  `/api/departments` route added in an earlier pass.
+
+## Added — Manual Mobile Money payment confirmation
+
+- Real MTN/Orange merchant API access (the original `initiatePayment`
+  webhook flow) needs business API approval most small hotels won't
+  have yet — this adds the manual fallback as the PRIMARY path in
+  `booking.html`, without removing the automatic one (still available,
+  untouched, for when real credentials exist).
+- `POST /api/payments/manual-submit` (guest, public): records a
+  `pending_manual_review` payment with the guest's transaction ID.
+  Duplicate transaction IDs are rejected by Firestore itself
+  (`paymentReferences`, doc-ID-as-unique-key, same pattern used
+  elsewhere), not just a client-side check.
+- `POST /api/payments/manual-confirm` / `manual-reject` (staff): reuses
+  the existing `confirmPayment()` finalize logic exactly — there is
+  still only ONE code path that actually marks a reservation paid,
+  regardless of whether that came from a webhook or manual review.
+- New `public/admin/pending-payments.html` for staff to review and
+  confirm/reject.
+- `booking.html`'s payment step now shows the hotel's real MTN/Orange
+  number (admin-configurable, `settings/hotel.payment.*`), a
+  transaction-ID help box with a worked example, and a confirmation-
+  delay call-only phone number — same UX pattern used elsewhere for
+  manually-verified payments.
+
+## Follow-up in this same pass
+
+- Added `public/admin/bar-dashboard.html` (today/month sales+profit,
+  stock value, low/out-of-stock list, seller performance with date
+  filter) and wired it in as the first item under the "Bar" nav group —
+  closes the gap noted below where Bar had no dashboard page the way
+  Housekeeping/Restaurant do, which made the section look thinner than
+  its siblings even though it was already wired into the same sidebar.
+
+## Known limitations / not done in this pass
+
+- The generic tracking-code "any tracked person" self-service portal
+  (workers/employees loading their own salary/leave/notes data via a
+  private code) was built as a separate standalone project (`barpos.zip`,
+  a prior turn) at the user's request at the time; it has NOT yet been
+  ported into Aurelia's own `employees`/`payroll` collections. This is
+  the next clear piece of integration work if wanted.
+- No admin UI page surfaces `GET /api/bar/dashboard` /
+  `GET /api/bar/seller-performance` yet (the endpoints are real and
+  tested; building a dashboard card/report page for them is still open).
+- `settings/hotel.payment.*` (MTN/Orange numbers, confirmation phone)
+  must currently be set via a direct API call
+  (`PUT /api/reports/finance { settings }`) — no settings-page UI field
+  for it yet; `docs/SETUP_AND_DEPLOY.md`-style curl instructions should
+  be added for this.
+
+---
+
 # CHANGELOG — Departments, Sales Management, Real Report Exports & Audit-Trail Completeness
 
 Second additive pass, on top of the financial/debt/salary/WhatsApp pass
@@ -238,70 +327,3 @@ collection names before ever touching the database.
   reason as before — see the previous CHANGELOG for the exact steps
   (delete everything except `.env` and `.git`, extract, copy in, `npm
   install`, `npm run dev`, `git add . && git commit && git push`).
-=======
-# CHANGELOG — This Delivery vs. Your Local Copy
-
-You told me you already have: (1) the manual `server/app.js` require-path fix,
-and (2) the full `public/` folder from the previous "ticker + images +
-rooms/apartments" delivery. Based on that, here is exactly what's new or
-changed in **this** zip, split into what you still need to copy over and
-what you can skip.
-
-## 🔴 Copy these — you do NOT have them yet
-
-These are backend files. You said you only copied `public/`, so your local
-project is still missing the server-side logic that makes the weekly/
-monthly discount pricing actually apply at booking time (right now it
-would only *display* on the room details page, not calculate correctly
-when a guest books).
-
-| File | What changed |
-|---|---|
-| `server/utils/calculations.js` | Added `tierDiscountForNights()` and `buildRateCard()` — automatically applies a room type's `weeklyDiscountPercent` at 7+ nights, `monthlyDiscountPercent` at 28+ nights, and builds the nightly/weekly/monthly rate table used on the room details page |
-| `server/services/bookingService.js` | `previewQuote()` and `createBooking()` now read and apply those discount fields when calculating a real price — was previously ignoring them |
-| `database/seed.js` | Demo room types now include `category` (room/apartment), `hasAC`, `hasFan`, `weeklyDiscountPercent`, `monthlyDiscountPercent`, `photoUrl`; menu items now include `description` and `photoUrl` |
-| `database/database-schema.md` | Documentation updated to match the new `roomTypes`/`menuItems` fields (reference only, doesn't affect runtime) |
-| `tests/rooms.test.js` | Added 2 new tests covering the discount-tier math (reference/CI only, doesn't affect runtime) |
-
-**How to copy them**: replace the matching files at the same paths in your
-local `C:\Users\dell\Desktop\aurelia\` folder with the ones from this zip.
-Nodemon will auto-restart once you save `calculations.js` and
-`bookingService.js`.
-
-## 🟢 Already yours — safe to skip, listed for verification only
-
-If you want to double check your local copy matches, these are every
-`public/` file that changed in the previous delivery (the one you already
-applied):
-
-`public/css/ticker.css` (new) · `public/js/ticker.js` (new) ·
-`public/css/rooms.css` (edited) · `public/index.html` (rewritten) ·
-`public/gallery.html` (rewritten) · `public/rooms.html` (rewritten) ·
-`public/room-details.html` (rewritten) · `public/about.html` (edited) ·
-`public/restaurant.html` (new) · `public/amenities.html` (new) ·
-`public/js/layout.js` (edited) · `public/css/style.css` (edited) ·
-`public/robots.txt` (new) · `public/sitemap.xml` (new) ·
-`public/js/admin-page-configs.js` (edited) · `public/js/admin-crud.js` (edited)
-
-## ⚪ Not changed since your first download
-
-Everything else — `api/`, `functions/`, `scripts/`, `docs/`, `.env.example`,
-`vercel.json`, `firebase.json`, `package.json`, and the rest of `server/`
-(controllers, middleware, other services) — is identical to what you
-already have, aside from the one `server/app.js` fix you already applied
-manually.
-
-## After copying the 🔴 files
-
-Your live Firestore data was seeded with the *old* room-type shape (no
-category/AC/fan/discount fields). To see the full feature working:
-
-- **Fastest**: go to Admin → Rooms → Room Types, edit each existing room
-  type, and fill in Category, Has AC, Has Fan, Weekly Discount %, Monthly
-  Discount % using the "Edit" button on each row.
-- **Or**: clear the `roomTypes` and `rooms` collections in the Firebase
-  Console, then run `npm run seed` again to regenerate everything fresh
-  with the new fields already filled in (this also regenerates all
-  rooms/reservations/guests, so only do this on a dev project you're okay
-  resetting).
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5

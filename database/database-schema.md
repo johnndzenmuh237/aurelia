@@ -7,7 +7,6 @@ root level (no nested subcollections) to keep queries simple across roles.
 ## Core reservation flow
 
 **rooms**
-<<<<<<< HEAD
 `{ number, displayNumber, roomTypeId, type, floor, building, capacity, rate, status,
    createdAt }`
 `status`: available | reserved | occupied | dirty | cleaning | clean |
@@ -19,12 +18,6 @@ different. `displayNumber` is the guest-facing label ("Room 3", "Apartment
 12"); the client also derives this automatically from `number` via
 `Utils.formatRoomLabel()` wherever a room is displayed without a full room
 document on hand (e.g. inside a reservation).
-=======
-`{ number, roomTypeId, type, floor, building, capacity, rate, status,
-   createdAt }`
-`status`: available | reserved | occupied | dirty | cleaning | clean |
-inspected | maintenance | outoforder
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 **roomTypes**
 `{ name, category, description, basePrice, maxAdults, maxChildren, bedType,
@@ -79,7 +72,6 @@ No Show | Waitlisted
 **maintenanceRequests** `{ room, issue, priority, assignedTechnician,
    status, estimatedCost, actualCost, createdAt, completedDate }`
 
-<<<<<<< HEAD
 **orders** (restaurant) `{ type, items[], table, guestName, total, status,
    kitchenStatus, createdAt }` — plus, when `type: "delivery"`:
 `{ orderNumber, fullName, phone, whatsapp, email, deliveryAddress, notes,
@@ -90,12 +82,6 @@ No Show | Waitlisted
 `day` (optional): Monday..Sunday — only set on Breakfast/Lunch/Dinner
 items that rotate daily; omit for items served every day (Drinks,
 Desserts, or a dish available all week).
-=======
-**orders** (restaurant) `{ items[], table, guestName, total, status,
-   kitchenStatus, createdAt }`
-
-**menuItems** `{ name, category, price, description, photoUrl, available }`
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 
 **inventoryItems** `{ sku, name, category, quantity, minStock, unitCost,
    sellingPrice, location }`
@@ -155,7 +141,6 @@ maintenance | restaurant | hr | accountant | employee | guest
 
 **events** `{ eventName, client, date, guestCount, charges }`
 
-<<<<<<< HEAD
 **barInventory** `{ category, brand, unit, quantity, unitPrice, totalValue,
    quantitySold, totalSalesRevenue }`
 `category`: Whiskey | Champagne | Beer | Juice. `totalValue` and
@@ -250,8 +235,75 @@ Routine list/detail reads and the guest's own self-service profile edit
 are intentionally still not logged (matches the existing convention:
 `auditLogs` records staff-initiated, state-changing actions).
 
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
+## Bar management upgrade & manual Mobile Money confirmation (extension)
+
+**barInventory** (existing collection, EXTENDED — backward-compatible):
+items created the original simple way (`category`, `brand`, `unit`,
+`quantity`, `unitPrice`) keep working unchanged. New, optional universal-
+engine fields (bar spec §9): `containerName`, `unitsPerContainer`,
+`costPerContainer`, `sellingPricePerUnit` (mirrors `unitPrice`),
+`minStockContainers`. `quantity` remains the single source of truth for
+stock on hand either way — there is no separate parallel "stock" field.
+Figures (unit cost, stock status, expected profit, container+loose-unit
+stock label) are always derived live by `computeDrinkFigures()` in
+`server/utils/calculations.js`, never stored.
+
+**barCategories** `{ name, isDefault, createdAt }` — manager-configurable
+drink categories (bar spec §3), auto-seeded with the spec's 8 defaults
+(Beer, Juice, Whiskey, Champagne, Soft Drinks, Water, Energy Drinks,
+Other Drinks) on first use.
+
+**barInventoryTransactions** `{ itemId, type ("opening_stock"|"restock"),
+   containers, unitsPerContainer, unitsAdded, costPerContainer, supplier,
+   createdBy, createdAt }` — permanent restock history (bar spec §19);
+stock increases are never a silent edit to `quantity` alone.
+
+**barStockAdjustments** `{ itemId, deltaUnits, reason, notes, createdBy,
+   createdAt }` — controlled corrections for breakage/damage/expiry/
+comps/missing stock/manual fixes (bar spec §20), transactional so stock
+can never go negative.
+
+**barSales** (existing collection, EXTENDED): now also stores
+`paymentMethod` (cash/mtn_momo/orange_money/card/other, bar spec §21)
+and `unitCostAtSale` (snapshotted at sale time, same historical-accuracy
+principle as room-booking payments — a later price/cost edit never
+rewrites a past sale's profit).
+
+New endpoints: `GET/POST /api/bar/categories`, `POST /api/bar/restock`,
+`POST /api/bar/adjust`, `GET /api/bar/dashboard` (today/month bar
+sales+profit, low/out-of-stock), `GET /api/bar/seller-performance`,
+`GET /api/bar/inventory` (figures-attached list, for any future
+non-live-listener consumer). New frontend: `public/admin/bar-pos.html`
+(fast-sell screen — category tabs, large tiles, +1/+2/+5/custom
+quantity) alongside the original `bar-sales.html` form and the upgraded
+`bar-inventory.html` (categories, container fields, Restock/Adjust
+actions).
+
+**Manual Mobile Money payment confirmation** (replaces the automatic-
+webhook flow as the primary path in `booking.html`, since that flow
+requires real MTN/Orange merchant API credentials most small hotels
+won't have on day one — `initiatePayment`/the webhook path are
+untouched and still available if/when real credentials exist):
+`payments` (existing collection) gets two new possible `status` values,
+`pending_manual_review` and `rejected`, plus `transactionId`,
+`senderPhone`, `manualSubmission: true` when submitted this way.
+
+**paymentReferences** `{ paymentId, reservationId, createdAt }` — doc ID
+is the normalized transaction ID; its sole purpose is duplicate-
+submission protection (the same anti-fraud pattern used elsewhere:
+Firestore itself rejects a second submission of the same transaction
+ID, not just a client-side check).
+
+New endpoints: `POST /api/payments/manual-submit` (public — guest
+submits after sending money), `POST /api/payments/manual-confirm` /
+`POST /api/payments/manual-reject` (staff), `GET /api/payments/pending-manual`.
+New frontend: `public/admin/pending-payments.html`; `booking.html`'s
+payment step now shows the hotel's MTN/Orange number (from
+`settings/hotel.payment.{mtnNumber,orangeNumber,...}`, admin-editable via
+the existing `PUT /api/reports/finance { settings }` route), a
+transaction-ID help box with a worked example, and a confirmation-delay
+call-only phone number (`settings/hotel.payment.confirmationPhone`).
+
 ## System
 
 **notifications** `{ type, message, read, createdAt }`

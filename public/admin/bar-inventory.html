@@ -16,43 +16,63 @@
       <div class="stat-card stat-warn"><div class="stat-label">Items Low / Out of Stock</div><div class="stat-value" id="statLowStock">–</div></div>
     </div>
 
+    <div class="panel" style="padding:14px; margin-bottom:16px;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <strong style="font-size:.85rem;">Categories:</strong>
+        <span id="categoryChips"></span>
+        <input id="newCategoryInput" placeholder="New category name" style="width:180px; margin:0;">
+        <button class="btn btn-ghost btn-sm" id="addCategoryBtn">+ Add Category</button>
+      </div>
+    </div>
+
     <div class="panel">
       <div class="table-toolbar">
         <input type="search" id="barSearch" placeholder="Search brand…" style="min-width:220px">
-        <select id="catFilter">
-          <option value="">All Categories</option>
-          <option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option>
-        </select>
+        <select id="catFilter"><option value="">All Categories</option></select>
         <span class="spacer"></span>
         <button class="btn btn-primary btn-sm" id="addItemBtn">+ Add Drink</button>
       </div>
       <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Category</th><th>Brand</th><th>Unit</th><th>Qty Remaining</th><th>Unit Price</th><th>Inventory Value</th><th>Qty Sold</th><th>Revenue</th><th></th></tr></thead>
+        <thead><tr><th>Category</th><th>Brand</th><th>Stock</th><th>Price/Unit</th><th>Status</th><th>Inventory Value</th><th>Qty Sold</th><th>Revenue</th><th></th></tr></thead>
         <tbody id="barBody"><tr><td colspan="9"><div class="empty-state">Loading…</div></td></tr></tbody>
       </table></div>
     </div>
   </div>
 </div>
 
-<dialog id="itemDialog" style="border:none; border-radius:16px; padding:24px; width:min(92vw,420px)">
+<dialog id="itemDialog" style="border:none; border-radius:16px; padding:24px; width:min(92vw,460px)">
   <h3 id="dialogTitle" style="margin-bottom:14px">Add Drink</h3>
   <form id="itemForm">
-    <div class="field"><label>Category</label>
-      <select name="category" required><option>Whiskey</option><option>Champagne</option><option>Beer</option><option>Juice</option></select>
-    </div>
+    <div class="field"><label>Category</label><select name="category" id="categorySelect" required></select></div>
     <div class="field"><label>Brand / Type</label><input name="brand" required placeholder="e.g. Johnnie Walker Black Label"></div>
     <div class="field-row">
-      <div class="field"><label>Unit</label>
-        <select name="unit"><option value="bottle">Bottle</option><option value="crate">Crate</option><option value="case">Case</option></select>
-      </div>
-      <div class="field"><label>Quantity</label><input name="quantity" type="number" min="0" required></div>
+      <div class="field"><label>Container Type</label><input name="containerName" placeholder="crate / carton / pallet"></div>
+      <div class="field"><label>Units Per Container</label><input name="unitsPerContainer" type="number" min="1" placeholder="e.g. 12"></div>
     </div>
-    <div class="field"><label>Unit Price (FCFA)</label><input name="unitPrice" type="number" min="0" required></div>
+    <p class="form-note" style="margin:-6px 0 10px">Leave container fields blank to use the simple mode (just a running bottle count, no cost/profit tracking).</p>
+    <div class="field-row">
+      <div class="field"><label>Selling Price / Unit (FCFA)</label><input name="unitPrice" type="number" min="0" required></div>
+      <div class="field"><label>Cost Per Container (FCFA)</label><input name="costPerContainer" type="number" min="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field" id="openingContainersField"><label>Opening Stock (containers)</label><input name="openingContainers" type="number" min="0" value="0"></div>
+      <div class="field" id="quantityField"><label>Quantity (bottles)</label><input name="quantity" type="number" min="0"></div>
+    </div>
+    <div class="field"><label>Minimum Stock Alert (containers)</label><input name="minStockContainers" type="number" min="0" value="1"></div>
     <div style="display:flex; gap:10px; margin-top:10px">
       <button type="button" class="btn btn-ghost" id="dialogCancel">Cancel</button>
       <button type="submit" class="btn btn-primary btn-block">Save</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="actionDialog" style="border:none; border-radius:16px; padding:24px; width:min(92vw,420px)">
+  <h3 id="actionTitle" style="margin-bottom:14px"></h3>
+  <div id="actionBody"></div>
+  <div style="display:flex; gap:10px; margin-top:14px;">
+    <button type="button" class="btn btn-ghost" id="actionCancel" style="flex:1">Cancel</button>
+    <button type="button" class="btn btn-primary" id="actionConfirm" style="flex:1">Save</button>
+  </div>
 </dialog>
 
 <script src="/js/config.js"></script>
@@ -63,8 +83,30 @@
 <script src="/js/admin-layout.js"></script>
 <script>
 let allItems = [];
+let categories = [];
+
 document.addEventListener("firebase-ready", sub);
 if (window.firebaseDb) sub();
+loadCategories();
+
+async function loadCategories() {
+  try {
+    const { items } = await Utils.api("/bar/categories");
+    categories = items;
+    const chipsHtml = categories.map((c) => `<span class="chip" style="margin-right:4px">${c.name}</span>`).join("");
+    document.getElementById("categoryChips").innerHTML = chipsHtml;
+    const options = categories.map((c) => `<option>${c.name}</option>`).join("");
+    document.getElementById("categorySelect").innerHTML = options;
+    document.getElementById("catFilter").innerHTML = `<option value="">All Categories</option>${options}`;
+    render();
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+document.getElementById("addCategoryBtn").addEventListener("click", async () => {
+  const name = document.getElementById("newCategoryInput").value.trim();
+  if (!name) return;
+  try { await Utils.api("/bar/categories", { method: "POST", body: { name } }); document.getElementById("newCategoryInput").value = ""; await loadCategories(); }
+  catch (err) { Utils.toast(err.message, "error"); }
+});
 
 function sub() {
   const { collection, onSnapshot } = window.fb;
@@ -72,6 +114,27 @@ function sub() {
     allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     render();
   });
+}
+
+/** Mirrors server/utils/calculations.js's computeDrinkFigures() for
+ * instant client-side display off the same onSnapshot data the live
+ * table already uses — kept in sync with the server version; the
+ * server's figures are always the authoritative ones actually used
+ * for financial calculations (this is read-only display math). */
+function computeFigures(item) {
+  const unitsPerContainer = Number(item.unitsPerContainer || 1);
+  const costPerContainer = Number(item.costPerContainer || 0);
+  const sellingPricePerUnit = Number(item.sellingPricePerUnit ?? item.unitPrice ?? 0);
+  const quantity = Math.max(0, Number(item.quantity || 0));
+  const minStockContainers = Number(item.minStockContainers ?? 1);
+  const unitCost = unitsPerContainer > 0 ? costPerContainer / unitsPerContainer : 0;
+  const minStockUnits = minStockContainers * unitsPerContainer;
+  let status = "Available";
+  if (quantity <= 0) status = "Out of Stock"; else if (quantity <= minStockUnits) status = "Low Stock";
+  const fullContainers = item.unitsPerContainer ? Math.floor(quantity / unitsPerContainer) : null;
+  const looseUnits = item.unitsPerContainer ? quantity % unitsPerContainer : quantity;
+  const stockLabel = item.unitsPerContainer ? `${fullContainers} ${item.containerName}${fullContainers === 1 ? "" : "s"} + ${looseUnits} unit${looseUnits === 1 ? "" : "s"}` : `${quantity} ${item.unit || "bottle"}(s)`;
+  return { status, stockLabel, expectedProfit: Math.round(quantity * (sellingPricePerUnit - unitCost)) };
 }
 
 function render() {
@@ -83,36 +146,61 @@ function render() {
 
   document.getElementById("statTotalValue").textContent = Utils.formatMoney(allItems.reduce((s, i) => s + Number(i.totalValue || 0), 0));
   document.getElementById("statTotalRevenue").textContent = Utils.formatMoney(allItems.reduce((s, i) => s + Number(i.totalSalesRevenue || 0), 0));
-  document.getElementById("statLowStock").textContent = allItems.filter((i) => Number(i.quantity) <= 3).length;
+  document.getElementById("statLowStock").textContent = allItems.filter((i) => computeFigures(i).status !== "Available").length;
 
   const body = document.getElementById("barBody");
-  body.innerHTML = rows.length ? rows.map((i) => `
+  body.innerHTML = rows.length ? rows.map((i) => {
+    const f = computeFigures(i);
+    const badgeClass = f.status === "Available" ? "chip-clean" : f.status === "Low Stock" ? "chip-dirty" : "chip-dirty";
+    return `
     <tr>
-      <td>${i.category}</td><td><strong>${i.brand}</strong></td><td>${i.unit}</td>
-      <td>${i.quantity} ${Number(i.quantity) <= 3 ? '<span class="chip chip-dirty">Low</span>' : ""}</td>
-      <td>${Utils.formatMoney(i.unitPrice)}</td>
+      <td>${i.category}</td><td><strong>${i.brand}</strong></td>
+      <td>${f.stockLabel}</td>
+      <td>${Utils.formatMoney(i.sellingPricePerUnit ?? i.unitPrice)}</td>
+      <td><span class="chip ${badgeClass}">${f.status}</span></td>
       <td>${Utils.formatMoney(i.totalValue)}</td>
       <td>${i.quantitySold || 0}</td>
       <td>${Utils.formatMoney(i.totalSalesRevenue || 0)}</td>
-      <td><button class="btn btn-sm btn-ghost" data-edit="${i.id}">Edit</button></td>
-    </tr>`).join("") : `<tr><td colspan="9"><div class="empty-state">No drinks yet. Click “Add Drink” to start your inventory.</div></td></tr>`;
+      <td>
+        <button class="btn btn-sm btn-ghost" data-edit="${i.id}">Edit</button>
+        ${i.unitsPerContainer ? `<button class="btn btn-sm btn-ghost" data-restock="${i.id}">Restock</button>` : ""}
+        <button class="btn btn-sm btn-ghost" data-adjust="${i.id}">Adjust</button>
+      </td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="9"><div class="empty-state">No drinks yet. Click “Add Drink” to start your inventory.</div></td></tr>`;
 
   body.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openDialog(allItems.find((i) => i.id === b.dataset.edit))));
+  body.querySelectorAll("[data-restock]").forEach((b) => b.addEventListener("click", () => openActionDialog("restock", allItems.find((i) => i.id === b.dataset.restock))));
+  body.querySelectorAll("[data-adjust]").forEach((b) => b.addEventListener("click", () => openActionDialog("adjust", allItems.find((i) => i.id === b.dataset.adjust))));
 }
 
 document.getElementById("barSearch").addEventListener("input", Utils.debounce(render, 200));
 document.getElementById("catFilter").addEventListener("change", render);
 
+function toggleContainerMode(usingContainers) {
+  document.getElementById("openingContainersField").style.display = usingContainers ? "block" : "none";
+  document.getElementById("quantityField").style.display = usingContainers ? "none" : "block";
+}
+document.querySelector('[name="unitsPerContainer"]').addEventListener("input", (e) => toggleContainerMode(!!e.target.value));
+
 function openDialog(existing) {
   const dialog = document.getElementById("itemDialog");
   const form = document.getElementById("itemForm");
   document.getElementById("dialogTitle").textContent = existing ? `Edit ${existing.brand}` : "Add Drink";
-  form.category.value = existing?.category || "Whiskey";
+  form.category.value = existing?.category || categories[0]?.name || "";
   form.brand.value = existing?.brand || "";
-  form.unit.value = existing?.unit || "bottle";
+  form.containerName.value = existing?.containerName || "";
+  form.unitsPerContainer.value = existing?.unitsPerContainer || "";
+  form.unitPrice.value = existing?.sellingPricePerUnit ?? existing?.unitPrice ?? "";
+  form.costPerContainer.value = existing?.costPerContainer ?? "";
   form.quantity.value = existing?.quantity ?? "";
-  form.unitPrice.value = existing?.unitPrice ?? "";
+  form.minStockContainers.value = existing?.minStockContainers ?? 1;
+  form.openingContainers.value = "0";
+  toggleContainerMode(!!existing?.unitsPerContainer);
   dialog.dataset.editingId = existing?.id || "";
+  // Editing an existing item never changes its opening stock here — use
+  // Restock/Adjust for that, so stock changes are always logged (spec §19-20).
+  form.openingContainers.closest(".field").style.display = existing ? "none" : "block";
   dialog.showModal();
 }
 document.getElementById("addItemBtn").addEventListener("click", () => openDialog(null));
@@ -131,6 +219,49 @@ document.getElementById("itemForm").addEventListener("submit", async (e) => {
     dialog.close();
   } catch (err) { Utils.toast(err.message, "error"); }
 });
+
+// ---------------- Restock / Adjust (bar spec §19-20) ----------------
+function openActionDialog(action, item) {
+  const dialog = document.getElementById("actionDialog");
+  document.getElementById("actionTitle").textContent = `${action === "restock" ? "Restock" : "Adjust Stock"} — ${item.brand}`;
+  const body = document.getElementById("actionBody");
+  if (action === "restock") {
+    body.innerHTML = `
+      <div class="field"><label>Containers to Add</label><input id="aContainers" type="number" min="1"></div>
+      <div class="field"><label>Cost Per Container (leave blank to keep current)</label><input id="aCost" type="number"></div>
+      <div class="field"><label>Supplier</label><input id="aSupplier"></div>`;
+  } else {
+    body.innerHTML = `
+      <div class="field"><label>Reason</label>
+        <select id="aReason">
+          <option value="broken">Broken</option><option value="damaged">Damaged</option><option value="expired">Expired</option>
+          <option value="complimentary">Complimentary</option><option value="missing">Missing</option><option value="manual_correction">Manual Correction</option>
+        </select>
+      </div>
+      <div class="field"><label>Units to Remove</label><input id="aDelta" type="number" min="1" placeholder="e.g. 2"></div>
+      <div class="field"><label>Notes</label><input id="aNotes"></div>`;
+  }
+  document.getElementById("actionConfirm").onclick = async () => {
+    try {
+      if (action === "restock") {
+        await Utils.api("/bar/restock", { method: "POST", body: {
+          itemId: item.id, containers: Number(document.getElementById("aContainers").value),
+          costPerContainer: document.getElementById("aCost").value ? Number(document.getElementById("aCost").value) : undefined,
+          supplier: document.getElementById("aSupplier").value || undefined,
+        }});
+      } else {
+        await Utils.api("/bar/adjust", { method: "POST", body: {
+          itemId: item.id, deltaUnits: -Math.abs(Number(document.getElementById("aDelta").value)),
+          reason: document.getElementById("aReason").value, notes: document.getElementById("aNotes").value || undefined,
+        }});
+      }
+      dialog.close();
+      Utils.toast("Updated", "success");
+    } catch (err) { Utils.toast(err.message, "error"); }
+  };
+  dialog.showModal();
+}
+document.getElementById("actionCancel").addEventListener("click", () => document.getElementById("actionDialog").close());
 </script>
 </body>
 </html>

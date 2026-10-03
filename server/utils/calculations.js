@@ -53,4 +53,43 @@ function balanceOf({ total, paid }) {
   return Math.max(0, Math.round(Number(total || 0) - Number(paid || 0)));
 }
 
-module.exports = { quoteRoom, buildRateCard, recalcFolio, balanceOf };
+/**
+ * Universal container-based inventory engine for the bar module (bar
+ * spec §9: "Do NOT create separate hard-coded calculations for each
+ * drink"). Every figure is derived from four inputs — currentStockUnits,
+ * unitsPerContainer, costPerContainer, sellingPricePerUnit — so a price
+ * edit, a sale, or a restock automatically changes every dependent
+ * figure, nothing stored redundantly. Backward-compatible with the
+ * original simple bar items (which only ever had quantity+unitPrice,
+ * no container/cost data): those fall back to unitCost=0 and container
+ * figures of "1 unit per container", rather than breaking.
+ */
+function computeDrinkFigures(item) {
+  const unitsPerContainer = Number(item.unitsPerContainer || 1);
+  const costPerContainer = Number(item.costPerContainer || 0);
+  const sellingPricePerUnit = Number(item.sellingPricePerUnit ?? item.unitPrice ?? 0);
+  const currentStockUnits = Math.max(0, Number(item.quantity ?? 0));
+  const minStockContainers = Number(item.minStockContainers ?? 1);
+
+  const unitCost = unitsPerContainer > 0 ? costPerContainer / unitsPerContainer : 0;
+  const totalCost = Math.round(currentStockUnits * unitCost);
+  const expectedRevenue = Math.round(currentStockUnits * sellingPricePerUnit);
+  const expectedProfit = expectedRevenue - totalCost;
+  const profitPerUnit = Math.round((sellingPricePerUnit - unitCost) * 100) / 100;
+
+  const fullContainers = unitsPerContainer > 0 ? Math.floor(currentStockUnits / unitsPerContainer) : 0;
+  const looseUnits = unitsPerContainer > 0 ? currentStockUnits % unitsPerContainer : currentStockUnits;
+  const minStockUnits = minStockContainers * unitsPerContainer;
+
+  let status = "Available";
+  if (currentStockUnits <= 0) status = "Out of Stock";
+  else if (currentStockUnits <= minStockUnits) status = "Low Stock";
+
+  return {
+    unitCost: Math.round(unitCost * 100) / 100, totalCost, expectedRevenue, expectedProfit, profitPerUnit,
+    fullContainers, looseUnits, minStockUnits, status,
+    stockLabel: `${fullContainers} ${item.containerName || "container"}${fullContainers === 1 ? "" : "s"} + ${looseUnits} unit${looseUnits === 1 ? "" : "s"}`,
+  };
+}
+
+module.exports = { quoteRoom, buildRateCard, recalcFolio, balanceOf, computeDrinkFigures };

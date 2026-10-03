@@ -48,10 +48,7 @@
 
     function cell(col, row) {
       const v = row[col.key];
-<<<<<<< HEAD
       if (col.roomLabel) return Utils.formatRoomLabel(v);
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       if (col.bool) return (v === true || v === "true") ? "Yes" : "No";
       if (col.chip && v !== undefined) return `<span class="chip chip-${String(v).toLowerCase().replace(/[\s_-]/g, "")}">${v}</span>`;
       if (col.money) return Utils.formatMoney(v);
@@ -161,7 +158,6 @@
       }
     });
 
-<<<<<<< HEAD
     // Staff-only data — read through the authenticated API and poll for
     // updates, since Firestore rules can no longer distinguish "logged-in
     // staff" from "anyone" without Firebase Auth (see server/controllers/
@@ -181,23 +177,6 @@
       if (op === "<") return fieldValue < value;
       if (op === "<=") return fieldValue <= value;
       return true;
-=======
-    // Real-time Firestore listener
-    document.addEventListener("firebase-ready", subscribe);
-    if (window.firebaseDb) subscribe();
-
-    function subscribe() {
-      const { collection, query, where, onSnapshot } = window.fb;
-      let q = collection(window.firebaseDb, cfg.collection);
-      if (cfg.where) q = query(q, ...cfg.where.map(([f, op, v]) => where(f, op, v)));
-      onSnapshot(q, (snap) => {
-        allRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        applySearch(document.getElementById("crudSearch").value || "");
-      }, (err) => {
-        console.error(err);
-        document.getElementById("crudBody").innerHTML = `<tr><td colspan="${cfg.columns.length + 1}"><div class="empty-state">Could not load live data — check Firebase config in js/config.js and that Firestore rules allow this role to read “${cfg.collection}”.</div></td></tr>`;
-      });
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     }
   }
 

@@ -13,7 +13,6 @@ const stayController = require("./controllers/stayController");
 const paymentController = require("./controllers/paymentController");
 const entityControllers = require("./controllers/entityControllers");
 const opsControllers = require("./controllers/opsControllers");
-<<<<<<< HEAD
 const barController = require("./controllers/barController");
 const dataController = require("./controllers/dataController");
 const financeController = require("./controllers/financeController");
@@ -23,10 +22,6 @@ const app = express();
 // route-listing behavior fingerprinting — standard hardening so an
 // attacker can't trivially fingerprint the framework/version in use.
 app.disable("x-powered-by");
-=======
-
-const app = express();
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -35,19 +30,12 @@ const staff = authenticate(); // required
 const optionalAuth = authenticate({ optional: true }); // guests may be anonymous
 
 // ---------------- Auth ----------------
-<<<<<<< HEAD
 app.post("/api/auth/login", rateLimit({ max: 15 }), authController.login);
-=======
-app.post("/api/auth/register", authController.register);
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 app.get("/api/auth/verify", staff, authController.verify);
 
 // ---------------- Bookings (public + walk-in) ----------------
 app.get("/api/bookings/check-availability", bookingController.checkAvailability);
-<<<<<<< HEAD
 app.get("/api/bookings/lookup", rateLimit({ max: 20 }), bookingController.lookupBooking);
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 app.get("/api/rooms/availability", optionalAuth, entityControllers.roomAvailabilityQuery);
 app.get("/api/bookings/create", bookingController.create); // preview quote (?preview=1)
 app.post("/api/bookings/create", optionalAuth, rateLimit({ max: 20 }), bookingController.create);
@@ -58,6 +46,10 @@ app.post("/api/checkout", staff, requireRole("front_desk", "manager"), stayContr
 
 // ---------------- Payments ----------------
 app.post("/api/payments/create", optionalAuth, rateLimit({ max: 10 }), paymentController.create);
+app.post("/api/payments/manual-submit", optionalAuth, rateLimit({ max: 10 }), paymentController.manualSubmit);
+app.post("/api/payments/manual-confirm", staff, requireRole("front_desk", "manager", "accountant"), paymentController.manualConfirm);
+app.post("/api/payments/manual-reject", staff, requireRole("front_desk", "manager", "accountant"), paymentController.manualReject);
+app.get("/api/payments/pending-manual", staff, requireRole("front_desk", "manager", "accountant"), paymentController.pendingManual);
 app.post("/api/payments/verify", staff, paymentController.verify);
 app.post("/api/payments/refund", staff, requireRole("accountant", "manager"), paymentController.refund);
 app.post("/api/webhooks/payment", paymentController.webhook); // provider callback, no user auth
@@ -88,15 +80,19 @@ app.post("/api/restaurant/orders", staff, requireRole("restaurant", "manager"), 
 app.put("/api/restaurant/orders", staff, requireRole("restaurant", "manager"), opsControllers.updateOrder);
 app.post("/api/restaurant/menu", staff, requireRole("restaurant", "manager"), opsControllers.menuHandler);
 app.put("/api/restaurant/menu", staff, requireRole("restaurant", "manager"), opsControllers.menuHandler);
-<<<<<<< HEAD
 app.post("/api/restaurant/delivery", optionalAuth, rateLimit({ max: 15 }), opsControllers.createDeliveryOrder);
 
 // ---------------- Bar (spec §14-17: display-only public site, staff-only sales) ----------------
 app.post("/api/bar/inventory", staff, requireRole("manager", "restaurant"), barController.createItem);
 app.put("/api/bar/inventory", staff, requireRole("manager", "restaurant"), barController.updateItem);
+app.get("/api/bar/inventory", staff, barController.listWithFigures);
 app.post("/api/bar/sell", staff, requireRole("manager", "restaurant"), barController.sell);
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
+app.get("/api/bar/categories", staff, barController.listCategories);
+app.post("/api/bar/categories", staff, requireRole("manager"), barController.createCategory);
+app.post("/api/bar/restock", staff, requireRole("manager", "restaurant"), barController.restock);
+app.post("/api/bar/adjust", staff, requireRole("manager"), barController.adjust);
+app.get("/api/bar/dashboard", staff, requireRole("manager", "restaurant"), barController.dashboard);
+app.get("/api/bar/seller-performance", staff, requireRole("manager"), barController.sellerPerformance);
 
 // ---------------- Inventory ----------------
 app.post("/api/inventory/items", staff, requireRole("manager", "accountant"), opsControllers.inventoryItemsHandler);
@@ -116,19 +112,15 @@ app.post("/api/payroll/generate", staff, requireRole("hr", "accountant", "manage
 app.put("/api/payroll/approve", staff, requireRole("accountant", "manager"), opsControllers.payrollApprove);
 
 // ---------------- Reports / finance / settings ----------------
-<<<<<<< HEAD
 // Specific routes MUST come before the generic "/api/reports/:key" catch-all
 // below, or Express would match "/api/reports/activity" as key="activity".
 app.get("/api/reports/ai/insights", staff, requireRole("manager", "super_admin"), opsControllers.aiInsightsHandler);
 app.post("/api/reports/ai/insights", staff, requireRole("manager", "super_admin"), opsControllers.aiInsightsHandler);
 app.get("/api/reports/activity", staff, requireRole("manager", "super_admin"), opsControllers.activityFeed);
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 app.get("/api/reports/:key", staff, requireRole("manager", "accountant"), opsControllers.reportByKey);
 app.post("/api/reports/finance", staff, requireRole("manager", "accountant"), opsControllers.financeHandler);
 app.put("/api/reports/finance", staff, requireRole("manager", "accountant", "super_admin"), opsControllers.financeHandler);
 
-<<<<<<< HEAD
 // ---------------- Departments (spec §22) ----------------
 app.get("/api/departments", staff, opsControllers.departmentsHandler);
 app.post("/api/departments", staff, requireRole("hr", "manager"), opsControllers.departmentsHandler);
@@ -168,10 +160,6 @@ app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISO
 // own dedicated, role-checked routes above).
 app.get("/api/staff/data/:collection", staff, dataController.list);
 
-=======
-app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
-
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 app.use((req, res) => res.status(404).json({ error: { message: "Not found." } }));
 app.use(errorHandler);
 

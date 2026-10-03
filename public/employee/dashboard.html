@@ -21,11 +21,7 @@
       <div class="stat-card"><div class="stat-label">This Week's Shifts</div><div class="stat-value" id="eShifts">–</div></div>
     </div>
     <div class="panel" style="padding:20px">
-<<<<<<< HEAD
       <button class="btn btn-primary" id="clockBtn">Mark Present</button>
-=======
-      <button class="btn btn-primary" id="clockBtn">Clock In</button>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     </div>
 
 </main>
@@ -41,7 +37,6 @@
 let empId = null;
 Auth.onReady(async (user, profile) => {
   if (!user) return;
-<<<<<<< HEAD
   empId = profile?.fullName || user.uid;
   const todayStr = new Date().toISOString().slice(0,10);
   Utils.pollCollection("employeeAttendance", (rows) => {
@@ -51,18 +46,6 @@ Auth.onReady(async (user, profile) => {
   });
   Utils.pollCollection("housekeepingTasks", (rows) => {
     document.getElementById("eTasks").textContent = rows.filter((t) => t.assignedTo === empId && t.status !== "completed").length;
-=======
-  empId = profile?.employeeId || user.uid;
-  const todayStr = new Date().toISOString().slice(0,10);
-  const { collection, query, where, onSnapshot } = window.fb;
-  onSnapshot(query(collection(window.firebaseDb, "employeeAttendance"), where("employeeId", "==", empId), where("date", "==", todayStr)), (snap) => {
-    const rec = snap.docs[0]?.data();
-    document.getElementById("eStatus").textContent = rec ? (rec.checkOut ? "Clocked out" : "Clocked in") : "Not clocked in";
-    document.getElementById("clockBtn").textContent = rec && !rec.checkOut ? "Clock Out" : "Clock In";
-  });
-  onSnapshot(query(collection(window.firebaseDb, "housekeepingTasks"), where("assignedTo", "==", empId), where("status", "!=", "completed")), (snap) => {
-    document.getElementById("eTasks").textContent = snap.size;
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
   });
 });
 document.getElementById("clockBtn").addEventListener("click", async () => {

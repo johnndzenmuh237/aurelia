@@ -25,6 +25,13 @@ const ALLOWED_COLLECTIONS = new Set([
   // extension: expense budgets, customer credit sales and their payments,
   // per-employee salary payments, and the WhatsApp delivery/error log.
   "budgets", "creditTransactions", "creditPayments", "salaryPayments", "whatsappLogs", "sales",
+  // Bar management extension: configurable categories, restock history,
+  // and stock-adjustment audit trail (bar spec §3, §19-20).
+  "barCategories", "barInventoryTransactions", "barStockAdjustments",
+  // Manual Mobile Money payment confirmation extension (duplicate
+  // transaction-ID protection doc; not normally browsed directly, but
+  // listed here for consistency/debugging access).
+  "paymentReferences",
   // Also public via Firestore rules, but admin-crud.js reads everything
   // through this one endpoint uniformly for simplicity — no harm in a
   // signed-in staff member reading data that's public anyway.

@@ -9,10 +9,7 @@
     { href: "/index.html", label: "Home" },
     { href: "/rooms.html", label: "Rooms & Apartments" },
     { href: "/restaurant.html", label: "Restaurant" },
-<<<<<<< HEAD
     { href: "/bar.html", label: "Bar" },
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
     { href: "/amenities.html", label: "Amenities" },
     { href: "/gallery.html", label: "Gallery" },
     { href: "/offers.html", label: "Offers" },
@@ -38,11 +35,7 @@
           <a href="/index.html" class="brand"><span class="brand-mark"></span>Aurelia Hotel</a>
           <nav class="main-nav">${navHtml()}</nav>
           <div class="header-actions">
-<<<<<<< HEAD
             <a href="/login.html" class="btn btn-ghost btn-sm">Staff Login</a>
-=======
-            <a href="/login.html" class="btn btn-ghost btn-sm">Sign in</a>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
             <a href="/booking.html" class="btn btn-primary btn-sm">Book Now</a>
             <button class="menu-toggle" id="drawerOpenBtn" aria-label="Open menu"><span></span></button>
           </div>
@@ -57,11 +50,7 @@
         <nav>${navHtml()}</nav>
         <div class="drawer-cta">
           <a href="/booking.html" class="btn btn-primary btn-block">Book Now</a>
-<<<<<<< HEAD
           <a href="/login.html" class="btn btn-outline btn-block">Staff Login</a>
-=======
-          <a href="/login.html" class="btn btn-outline btn-block">Sign in</a>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
         </div>
       </aside>
     `;
@@ -92,12 +81,7 @@
           </div>
           <div>
             <h4>Guest</h4>
-<<<<<<< HEAD
             <a href="/track-booking.html">Track my booking</a>
-=======
-            <a href="/login.html">Sign in</a>
-            <a href="/register.html">Create account</a>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
             <a href="/booking.html">Book a room</a>
           </div>
           <div>
@@ -106,7 +90,6 @@
             <a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a>
           </div>
         </div>
-<<<<<<< HEAD
         <div class="footer-bottom">
           © <span id="year"></span> Aurelia Hotel. All rights reserved. ·
           <a href="/privacy-policy.html" style="color:#9FB8AC">Privacy Policy</a> ·
@@ -114,9 +97,6 @@
           <a href="/refund-policy.html" style="color:#9FB8AC">Refund Policy</a> ·
           <a href="/cookies-policy.html" style="color:#9FB8AC">Cookies Policy</a>
         </div>
-=======
-        <div class="footer-bottom">© <span id="year"></span> Aurelia Hotel. All rights reserved.</div>
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
       </footer>
     `;
     document.getElementById("year").textContent = new Date().getFullYear();
@@ -124,13 +104,10 @@
 
   renderHeader();
   renderFooter();
-<<<<<<< HEAD
 
   // Cookie consent banner — loaded here so every public page gets it
   // without needing its own <script> tag (see js/cookie-consent.js).
   const consentScript = document.createElement("script");
   consentScript.src = "/js/cookie-consent.js";
   document.body.appendChild(consentScript);
-=======
->>>>>>> cee3b36d42600e502dc7bbc822e817b33780b7d5
 })();
