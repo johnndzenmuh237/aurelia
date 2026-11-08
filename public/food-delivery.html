@@ -20,6 +20,12 @@
   @media(max-width:900px){.fd-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:560px){.fd-grid{grid-template-columns:1fr}}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -134,5 +140,6 @@ document.getElementById("deliveryForm").addEventListener("submit", async (e) => 
   } catch (err) { Utils.toast(err.message, "error"); }
 });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

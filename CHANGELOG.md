@@ -1,3 +1,14 @@
+# Changelog
+
+## Owner control panel, managers, notifications, messaging, PWA (unreleased)
+- Added: business-owner account (one-time setup, login, password change, emailed-code reset), manager accounts created/edited/revoked/replaced by the owner, owner dashboard and record browser. See docs/owner-and-managers.md.
+- Added: targeted notifications + bell on every page; internal messaging (owner/managers/departments, announcements).
+- Added: installable PWA (manifest, service worker, icons, install prompt); Lucide icons replace glyph/emoji icons.
+- Added: server-side validation + professional forms (careers, contact, guest registration).
+- Security: `/api/staff/data/:collection` is now scoped per role (previously any staff login could read everything).
+- Fixed: merge-conflict markers in `public/js/config.js`; `Auth`/`Utils` were not on `window`, so client-side page guards never ran; `register.html` called a non-existent `Auth.register`.
+- Known, unchanged: the guest portal (`/guest/*`) still reads Firestore through the removed Firebase Auth and needs its own rebuild.
+
 # CHANGELOG — Bar Management Upgrade & Manual Mobile Money Confirmation
 
 Third additive pass. Two unrelated things landed together because they

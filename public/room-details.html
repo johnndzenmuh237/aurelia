@@ -11,6 +11,12 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/rooms.css">
 <script type="application/ld+json" id="productSchema"></script>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -107,7 +113,7 @@ async function load() {
         <div class="card" style="padding:24px; position:sticky; top:96px">
           <div class="room-card-price">${Utils.formatMoney(t.basePrice)}<span class="muted"> / night</span></div>
           <p class="muted" style="margin-bottom:8px">Sleeps up to ${t.maxAdults || 2} adults${t.maxChildren ? ` + ${t.maxChildren} children` : ""}</p>
-          <p class="muted" style="margin-bottom:16px">${t.hasAC ? "❄️ Air conditioned" : t.hasFan ? "🌀 Ceiling fan" : ""}</p>
+          <p class="muted" style="margin-bottom:16px">${t.hasAC ? `${Icons.svg("snowflake",{size:16})} Air conditioned` : t.hasFan ? "🌀 Ceiling fan" : ""}</p>
           <a class="btn btn-primary btn-block" href="/booking.html?type=${typeId}&checkIn=${checkIn}&checkOut=${checkOut}">Book This ${categoryLabel}</a>
           <a class="btn btn-outline btn-block" style="margin-top:8px" href="/rooms.html">← Compare other options</a>
         </div>
@@ -115,5 +121,6 @@ async function load() {
   });
 }
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

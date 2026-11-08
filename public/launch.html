@@ -1,0 +1,8 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Aurelia</title><meta name="robots" content="noindex"></head>
+<body><script>
+/* Entry point for the installed app: send the person to their own workspace, or to sign in. */
+(function(){var s=null;try{s=JSON.parse(localStorage.getItem("aurelia_session")||"null")}catch(e){}
+if(!s){location.replace("/login.html");return}
+var h={employee:"/employee/dashboard.html",restaurant:"/admin/restaurant/pos.html",reservations:"/admin/reservations.html",housekeeping:"/admin/housekeeping.html",maintenance:"/admin/maintenance.html",hr:"/admin/employees.html",accountant:"/admin/finance.html"};
+location.replace(s.role==="owner"?"/owner/dashboard.html":(s.accountId&&s.role==="manager")?"/manager/dashboard.html":(h[s.role]||"/admin/dashboard.html"));})();
+</script></body></html>

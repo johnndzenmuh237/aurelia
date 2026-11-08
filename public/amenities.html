@@ -20,6 +20,12 @@
   .quick-item .icon{font-size:1.6rem; margin-bottom:8px}
   @media(max-width:900px){.amenity-feature, .amenity-feature.reverse{grid-template-columns:1fr; direction:ltr} .quick-grid{grid-template-columns:1fr 1fr}}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -69,14 +75,14 @@
   <div class="container">
     <div class="section-head"><span class="eyebrow">Included With Every Stay</span><h2>The everyday essentials</h2></div>
     <div class="quick-grid">
-      <div class="quick-item card"><div class="icon">📶</div><strong>Free Wi-Fi</strong><p class="muted" style="font-size:.82rem">Throughout the property</p></div>
-      <div class="quick-item card"><div class="icon">🧺</div><strong>Laundry Service</strong><p class="muted" style="font-size:.82rem">Same-day on request</p></div>
-      <div class="quick-item card"><div class="icon">🚗</div><strong>Airport Transfer</strong><p class="muted" style="font-size:.82rem">Arranged on request</p></div>
-      <div class="quick-item card"><div class="icon">🛎️</div><strong>24/7 Front Desk</strong><p class="muted" style="font-size:.82rem">Real people, always on shift</p></div>
-      <div class="quick-item card"><div class="icon">🍽️</div><strong>Restaurant & Bar</strong><p class="muted" style="font-size:.82rem"><a href="/restaurant.html">View the menu →</a></p></div>
-      <div class="quick-item card"><div class="icon">🧹</div><strong>Daily Housekeeping</strong><p class="muted" style="font-size:.82rem">Included in every room</p></div>
-      <div class="quick-item card"><div class="icon">🧊</div><strong>Minibar</strong><p class="muted" style="font-size:.82rem">In every room, on request</p></div>
-      <div class="quick-item card"><div class="icon">💼</div><strong>Business Corner</strong><p class="muted" style="font-size:.82rem">Printing and workspace</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="wifi" data-size="26"></i></div><strong>Free Wi-Fi</strong><p class="muted" style="font-size:.82rem">Throughout the property</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="shirt" data-size="26"></i></div><strong>Laundry Service</strong><p class="muted" style="font-size:.82rem">Same-day on request</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="car" data-size="26"></i></div><strong>Airport Transfer</strong><p class="muted" style="font-size:.82rem">Arranged on request</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="concierge-bell" data-size="26"></i></div><strong>24/7 Front Desk</strong><p class="muted" style="font-size:.82rem">Real people, always on shift</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="utensils" data-size="26"></i></div><strong>Restaurant & Bar</strong><p class="muted" style="font-size:.82rem"><a href="/restaurant.html">View the menu →</a></p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="spray-can" data-size="26"></i></div><strong>Daily Housekeeping</strong><p class="muted" style="font-size:.82rem">Included in every room</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="glass-water" data-size="26"></i></div><strong>Minibar</strong><p class="muted" style="font-size:.82rem">In every room, on request</p></div>
+      <div class="quick-item card"><div class="icon"><i data-icon="briefcase" data-size="26"></i></div><strong>Business Corner</strong><p class="muted" style="font-size:.82rem">Printing and workspace</p></div>
     </div>
   </div>
 </section>
@@ -88,5 +94,6 @@
 <script src="/js/utils.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/layout.js"></script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Messages" data-roles="">
+  <div id="admin-content">
+
+    <div class="msg-shell" id="shell">
+      <section class="msg-list" aria-label="Conversations">
+        <div class="msg-list-head"><button class="btn btn-primary btn-sm" id="compose" style="flex:1"><i data-icon="plus" data-size="16"></i> New message</button><button class="btn btn-outline btn-sm" id="announce" hidden title="Send to whole departments"><i data-icon="megaphone" data-size="16"></i></button></div>
+        <div class="msg-list-body" id="convos"></div>
+      </section>
+      <section class="msg-thread" aria-label="Conversation">
+        <div id="thread" class="thread-empty state"><i data-icon="messages-square" data-size="34"></i><strong>Select a conversation</strong><span>Or start a new message.</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const $ = (id) => document.getElementById(id), esc = PortalUI.esc, ic = PortalUI.ic;
+  const me = Auth.getSession();
+  const myKey = me.accountId ? "acct:" + me.accountId : "role:" + me.role;
+  const canAnnounce = me.role === "owner" || me.role === "manager" || me.role === "super_admin";
+  let convos = [], activeId = null, recipients = null, timer = null;
+  if (canAnnounce) $("announce").hidden = false;
+
+  const other = (c) => c.participants.filter(p => p.key !== myKey);
+  const title = (c) => c.kind === "announcement" ? c.subject : (other(c).map(p => p.label).join(", ") || c.subject);
+  const isDept = (k) => k.startsWith("role:");
+
+  async function loadList(keepScroll) {
+    try {
+      const d = await Utils.api("/messages/conversations" + (me.role === "owner" && $("allToggle") && $("allToggle").checked ? "?scope=all" : ""));
+      convos = d.items;
+      renderList();
+    } catch (e) { $("convos").innerHTML = PortalUI.error(e.message); }
+  }
+  function renderList() {
+    const own = me.role === "owner" ? `<label class="check-item" style="margin:10px;font-size:.8rem"><input type="checkbox" id="allToggle" ${window.__all ? "checked" : ""}> Oversight: show every conversation</label>` : "";
+    $("convos").innerHTML = own + (convos.length ? convos.map(c => {
+      const o = other(c)[0];
+      return `<button class="convo ${c.unread ? "unread" : ""} ${c.id === activeId ? "active" : ""}" data-id="${esc(c.id)}"><span class="avatar ${c.kind === "announcement" || (o && isDept(o.key)) ? "dept" : ""}">${c.kind === "announcement" ? ic("megaphone", 16) : esc(PortalUI.initials(o ? o.label : "?"))}</span>
+        <span class="convo-main"><span class="convo-top"><span class="convo-title">${esc(title(c))}</span><span class="convo-time">${Utils.timeAgo(c.lastAt)}</span></span>
+        <span class="convo-sub" style="display:block">${c.kind === "announcement" ? "Announcement · " : ""}${esc(c.lastSenderName)}: ${esc(c.lastMessage)}</span></span>${c.unread ? '<span class="dot" aria-label="Unread"></span>' : ""}</button>`;
+    }).join("") : PortalUI.empty("inbox", "No conversations yet", "Start one with “New message”."));
+    const t = $("allToggle"); if (t) t.addEventListener("change", () => { window.__all = t.checked; loadList(); });
+  }
+  $("convos").addEventListener("click", (e) => { const b = e.target.closest(".convo"); if (b) openConvo(b.dataset.id); });
+
+  async function openConvo(id, silent) {
+    activeId = id; $("shell").classList.add("open");
+    if (!silent) $("thread").innerHTML = PortalUI.loading(5);
+    try {
+      const d = await Utils.api("/messages/conversations/" + id);
+      const c = d.conversation, canReply = c.replyAllowed && c.isParticipant;
+      const wasBottom = silent ? (() => { const tb = document.querySelector(".thread-body"); return !tb || tb.scrollHeight - tb.scrollTop - tb.clientHeight < 80; })() : true;
+      $("thread").className = "msg-thread"; $("thread").style.display = "flex";
+      $("thread").innerHTML = `<div class="thread-head"><button class="icon-btn back-btn" id="back" aria-label="Back to conversations">${ic("arrow-left")}</button>
+        <div style="min-width:0"><h3>${esc(title(c))}</h3><div class="sub">${esc(c.subject)} · ${c.participants.map(p => esc(p.label)).join(", ")}${!c.isParticipant ? " · <b>oversight view (read-only)</b>" : ""}</div></div></div>
+        <div class="thread-body" id="tb">${d.messages.map(m => `<div class="bubble ${m.mine ? "mine" : ""}"><span class="who">${m.mine ? "You" : esc(m.senderName)}</span>${esc(m.body)}<time>${Utils.formatDateTime(m.createdAt)}</time></div>`).join("")}</div>
+        ${canReply ? `<form class="composer" id="reply"><textarea rows="1" maxlength="4000" placeholder="Write a reply…" aria-label="Reply"></textarea><button class="btn btn-primary" type="submit" aria-label="Send">${ic("send", 16)} Send</button></form>`
+          : `<div class="composer" style="justify-content:center"><span class="muted" style="font-size:.86rem">${c.isParticipant ? "This is a one-way announcement. Start a direct message to respond." : "Read-only."}</span></div>`}`;
+      const tb = $("tb"); if (wasBottom) tb.scrollTop = tb.scrollHeight;
+      $("back").addEventListener("click", () => { $("shell").classList.remove("open"); activeId = null; renderList(); });
+      const f = $("reply");
+      if (f) {
+        const ta = f.querySelector("textarea");
+        ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } });
+        f.addEventListener("submit", async (e) => {
+          e.preventDefault(); const body = ta.value.trim(); if (!body) return;
+          try { ta.disabled = true; await Utils.api("/messages/send", { method: "POST", body: { conversationId: id, body } }); await openConvo(id, true); loadList(); }
+          catch (err) { Utils.toast(err.message, "error"); ta.disabled = false; }
+        });
+      }
+      loadList(); window.__refreshBell && window.__refreshBell();
+    } catch (e) { $("thread").className = "msg-thread"; $("thread").innerHTML = PortalUI.error(e.message); }
+  }
+
+  async function getRecipients() { if (!recipients) recipients = (await Utils.api("/messages/recipients")).items; return recipients; }
+
+  async function composeDialog(preselect) {
+    let list; try { list = await getRecipients(); } catch (e) { return Utils.toast(e.message, "error"); }
+    if (!list.length) return Utils.toast("There is nobody you can message yet.", "info");
+    const groups = { owner: "Owner", manager: "Managers", department: "Departments & teams" };
+    const opts = ["owner", "manager", "department"].map(k => { const it = list.filter(r => r.kind === k); return it.length ? `<optgroup label="${groups[k]}">${it.map(r => `<option value="${esc(r.key)}" ${r.key === preselect ? "selected" : ""}>${esc(r.label)}${r.departments && r.departments.length ? " — " + esc(r.departments.join(", ")) : ""}</option>`).join("")}</optgroup>` : ""; }).join("");
+    const dlg = PortalUI.modal({ title: "New message", submitText: "Send message", body: `<div class="field"><label for="to">To<span class="req">*</span></label><select id="to" name="to" required>${opts}</select></div>
+      <div class="field"><label for="subject">Subject</label><input id="subject" name="subject" maxlength="120"></div>
+      <div class="field"><label for="body">Message<span class="req">*</span></label><textarea id="body" name="body" rows="5" maxlength="4000" required></textarea></div>`,
+      onSubmit: async (form, close) => {
+        const d = PortalUI.formData(form); if (!d.body.trim()) throw new Error("Write a message first.");
+        const r = await Utils.api("/messages/send", { method: "POST", body: { to: [d.to], subject: d.subject, body: d.body } });
+        close(); Utils.toast("Message sent.", "success"); await loadList(); openConvo(r.conversationId);
+      } });
+  }
+  $("compose").addEventListener("click", () => composeDialog());
+
+  $("announce").addEventListener("click", () => {
+    const depts = Object.entries({ ...Auth.DEPARTMENTS, employee: "Employees" });
+    PortalUI.modal({ title: "Announcement to departments", submitText: "Send announcement", body: `<div class="field"><label>Send to<span class="req">*</span></label><div class="check-grid"><label class="check-item"><input type="checkbox" id="all"> <b>Everyone</b></label>${depts.map(([k, v]) => `<label class="check-item"><input type="checkbox" name="dept" value="${k}"> ${esc(v)}</label>`).join("")}</div></div>
+      <div class="field"><label>Subject<span class="req">*</span></label><input name="subject" maxlength="120" required></div><div class="field"><label>Announcement<span class="req">*</span></label><textarea name="body" rows="5" maxlength="4000" required></textarea></div>`,
+      onSubmit: async (form, close) => {
+        const d = PortalUI.formData(form); const departments = form.querySelector("#all").checked ? ["all"] : [...form.querySelectorAll("input[name=dept]:checked")].map(i => i.value);
+        if (!departments.length) throw new Error("Choose at least one department.");
+        if (!d.subject.trim() || !d.body.trim()) throw new Error("Add a subject and a message.");
+        await Utils.api("/messages/announce", { method: "POST", body: { departments, subject: d.subject, body: d.body } });
+        close(); Utils.toast("Announcement sent.", "success"); loadList();
+      } });
+  });
+
+  (async () => {
+    await loadList();
+    const qp = new URLSearchParams(location.search);
+    if (qp.get("c")) openConvo(qp.get("c"));
+    else if (qp.get("to")) composeDialog(qp.get("to"));
+  })();
+  timer = setInterval(() => { if (!document.hidden) { loadList(); if (activeId) openConvo(activeId, true); } }, 12000);
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

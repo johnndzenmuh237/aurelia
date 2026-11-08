@@ -30,8 +30,24 @@ async function sendEmail({ to, subject, text }) {
   }
 }
 
+// Who should hear about each kind of system-generated event.
+const SYSTEM_AUDIENCE = {
+  new_booking: ["dept:front_desk", "dept:reservations", "role:front_desk", "role:reservations", "role:manager"],
+  payment_received: ["dept:accountant", "dept:front_desk", "role:accountant", "role:front_desk", "role:manager"],
+  budget_alert: ["dept:accountant", "role:accountant", "role:manager"],
+};
+const SYSTEM_LINK = { new_booking: "/admin/reservations.html", payment_received: "/admin/payments.html", budget_alert: "/admin/finance.html" };
+
 async function pushInApp(message, type = "info") {
-  await db.collection("notifications").add({ type, message, read: false, createdAt: FieldValue.serverTimestamp() });
+  await db.collection("notifications").add({
+    type, message, read: false, createdAt: FieldValue.serverTimestamp(),
+    // Targeting (added): without it these rows would be visible to the
+    // owner/legacy manager only. Existing callers are unchanged.
+    title: type.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+    audienceKeys: SYSTEM_AUDIENCE[type] || ["role:manager"],
+    private: false, senderName: "System", readBy: [], archivedBy: [],
+    link: SYSTEM_LINK[type] || null,
+  });
 }
 
 async function notifyReservationCreated({ email, guestName, reservationCode, checkIn, checkOut, total }) {

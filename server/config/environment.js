@@ -44,6 +44,12 @@ module.exports = {
   timezone: process.env.HOTEL_TIMEZONE || "Africa/Douala",
 
   jwtSecret: required("JWT_SECRET"),
+  // Owner first-run setup is only possible with this one-time token (set it
+  // in the server environment, use it once, then remove it).
+  ownerSetupToken: process.env.OWNER_SETUP_TOKEN || "",
+  // Set to "true" once everyone has a personal account to turn the old
+  // shared role passwords off entirely.
+  disableSharedLogin: String(process.env.DISABLE_SHARED_ROLE_LOGIN || "").toLowerCase() === "true",
   roles: { passwords: ROLE_PASSWORDS },
 
   firebase: {

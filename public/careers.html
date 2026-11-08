@@ -6,6 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head><body>
 <div id="app-header"></div>
 <section class="section" style="padding-top:60px">
@@ -13,21 +19,40 @@
     <span class="eyebrow">Careers</span>
     <h1>Join the team</h1>
     <p class="muted">Submitted applications go straight into our HR pipeline for review — no separate spreadsheet, no re-typing (spec §36).</p>
-    <form class="card" style="padding:24px; margin-top:20px" id="applyForm">
+    <form class="card" style="padding:24px; margin-top:20px" id="applyForm" novalidate>
+      <div class="alert alert-ok hidden" id="applyOk" role="status"></div>
+      <div class="alert alert-error hidden" id="applyErr" role="alert"></div>
+      <p class="muted" style="font-size:.84rem">Fields marked <span style="color:var(--danger)">*</span> are required.</p>
+      <div class="form-section" style="margin-top:8px">Personal details</div>
       <div class="field-row">
-        <div class="field"><label>Full Name</label><input type="text" name="fullName" required></div>
-        <div class="field"><label>Phone</label><input type="tel" name="phone" required></div>
+        <div class="field"><label>Full Name<span class="req">*</span></label><input type="text" name="fullName" autocomplete="name" minlength="2" required></div>
+        <div class="field"><label>Phone<span class="req">*</span></label><input type="tel" name="phone" autocomplete="tel" placeholder="+237 6 00 00 00 00" required></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Email</label><input type="email" name="email" required></div>
-        <div class="field"><label>Position Applying For</label>
+        <div class="field"><label>Email</label><input type="email" name="email" autocomplete="email" placeholder="name@example.com"></div>
+        <div class="field"><label>City / Town</label><input type="text" name="city" autocomplete="address-level2"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Nationality</label><input type="text" name="nationality"></div>
+        <div class="field"><label>Languages spoken</label><input type="text" name="languages" placeholder="e.g. English, French"></div>
+      </div>
+      <div class="form-section">Position</div>
+      <div class="field-row">
+        <div class="field"><label>Position Applying For<span class="req">*</span></label>
           <select name="position" required>
+            <option value="">Choose a position…</option>
             <option>Front Desk</option><option>Housekeeping</option><option>Restaurant</option>
             <option>Kitchen</option><option>Maintenance</option><option>Security</option><option>Other</option>
           </select>
         </div>
+        <div class="field"><label>Available from</label><input type="date" name="availableFrom"></div>
       </div>
-      <div class="field"><label>Experience / Qualifications</label><textarea name="experience" rows="4"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Highest education</label>
+          <select name="education"><option value="">Select…</option><option>Primary school</option><option>Secondary school</option><option>Vocational / diploma</option><option>Bachelor's degree</option><option>Postgraduate</option></select></div>
+        <div class="field"><label>Years of experience</label><input type="number" name="yearsExperience" min="0" max="60" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>Experience / Qualifications</label><textarea name="experience" rows="4" maxlength="600"></textarea><span class="hint">Previous employers, certificates, skills.</span></div>
       <button type="submit" class="btn btn-primary btn-block">Submit Application</button>
     </form>
   </div>
@@ -37,16 +62,16 @@
 <script type="module" src="/js/firebase.js"></script>
 <script src="/js/utils.js"></script>
 <script src="/js/auth.js"></script>
+<script src="/js/form-validate.js"></script>
 <script src="/js/layout.js"></script>
 <script>
-document.getElementById("applyForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const body = Object.fromEntries(new FormData(e.target).entries());
-  try {
-    await Utils.api("/employees/applications", { method: "POST", auth: false, body });
-    Utils.toast("Application submitted — we'll be in touch.", "success");
-    e.target.reset();
-  } catch (err) { Utils.toast(err.message, "error"); }
-});
+const form = document.getElementById("applyForm");
+FormValidate.attach(form, async (body) => {
+  await Utils.api("/employees/applications", { method: "POST", auth: false, body });
+  const ok = document.getElementById("applyOk");
+  ok.textContent = "Thank you — your application was received. Our HR team will contact you if your profile matches an opening.";
+  ok.classList.remove("hidden"); form.reset(); ok.scrollIntoView({ behavior: "smooth", block: "center" });
+}, { errorBox: document.getElementById("applyErr") });
 </script>
+<script src="/js/app-core.js"></script>
 </body></html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Dashboard · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Owner Dashboard" data-roles="owner">
+  <div id="admin-content">
+
+    <div class="section-head"><div><h2>Business overview</h2><p class="muted" id="asOf">Loading…</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-outline btn-sm" id="refresh"><i data-icon="refresh-cw" data-size="16"></i> Refresh</button><button class="btn btn-gold btn-sm" data-install-btn hidden><i data-icon="download" data-size="16"></i> Install app</button></div></div>
+    <div id="statsMount"><div style="padding:20px"><div class="skeleton" style="height:70px"></div></div></div>
+    <div class="section-head"><div><h2 style="font-size:1.2rem">Money (all time · this month)</h2></div></div>
+    <div class="stat-grid" id="moneyMount"></div>
+    <div class="two-col">
+      <div class="panel"><div class="panel-head"><h3>Recent activity</h3><a class="btn btn-ghost btn-sm" href="/owner/records.html?c=auditLogs">Full audit trail</a></div><div id="activity"><div style="padding:20px"><div class="skeleton" style="height:70px"></div></div></div></div>
+      <div class="panel"><div class="panel-head"><h3>Go to a section</h3></div><div class="panel-body"><div class="link-grid" id="links"></div></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const money = (n) => Utils.formatMoney(n);
+  const $ = (id) => document.getElementById(id);
+  const LINKS = [
+    ["/owner/managers.html","Managers","user-cog","Create, edit, revoke"],["/portal/messages.html","Messages","messages-square","Managers & departments"],
+    ["/owner/records.html","Business records","database","Every collection, record by record"],["/admin/reservations.html","Reservations","calendar-days","Bookings & stays"],
+    ["/admin/rooms.html","Rooms","door-open","Rooms & apartments"],["/admin/guests.html","Guests","users","Guest records"],
+    ["/admin/restaurant/orders.html","Restaurant","utensils","Orders & menu"],["/admin/bar-dashboard.html","Bar","wine","Stock & sales"],
+    ["/admin/inventory.html","Inventory","boxes","Items & stock"],["/admin/suppliers.html","Suppliers","truck","Supplier records"],
+    ["/admin/finance.html","Finance","chart-pie","Income & expenses"],["/admin/payments.html","Payments","credit-card","All payments"],
+    ["/admin/employees.html","Employees","id-card","Staff records"],["/admin/payroll.html","Payroll","banknote","Salaries"],
+    ["/admin/reports.html","Reports","file-text","Exports"],["/admin/audit-logs.html","Audit logs","scroll-text","Who did what"],
+  ];
+  $("links").innerHTML = LINKS.map(l => `<a class="link-tile" href="${l[0]}"><span class="ti">${Icons.svg(l[2])}</span><div><b>${l[1]}</b><span>${l[3]}</span></div></a>`).join("");
+  const card = (label, value, icon, cls="") => `<div class="stat-card ${cls}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><span class="stat-ico">${Icons.svg(icon)}</span></div>`;
+  async function load() {
+    try {
+      const o = await Utils.api("/owner/overview");
+      const c = o.counts, m = o.money;
+      $("asOf").textContent = "Updated " + Utils.formatDateTime(o.generatedAt);
+      $("statsMount").innerHTML = `<div class="stat-grid six">` + [
+        card("Reservations", c.reservations, "calendar-days"), card("Guests", c.guests, "users"), card("Employees", c.employees, "id-card"),
+        card("Active managers", `${c.managersActive}<small style="font-size:.9rem;color:var(--slate)"> / ${c.managersTotal}</small>`, "user-cog"), card("Restaurant orders", c.orders, "utensils"), card("Bar sales", c.barSales, "wine"),
+        card("Payments", c.payments, "credit-card"), card("Pending payments", c.pendingPayments, "clock", c.pendingPayments ? "stat-warn" : ""), card("Expenses logged", c.expenses, "trending-down"),
+        card("Inventory items", c.inventoryItems, "boxes"), card("Open maintenance", c.openMaintenance, "wrench", c.openMaintenance ? "stat-warn" : ""), card("Job applications", c.applications, "briefcase"),
+      ].join("") + `</div>`;
+      const row = (label, v, icon, cls) => card(label, `<span style="font-size:1.35rem">${money(v.all)}</span><div class="stat-delta muted">this month ${money(v.month)}</div>`, icon, cls);
+      $("moneyMount").style.gridTemplateColumns = "repeat(4,1fr)";
+      $("moneyMount").innerHTML = row("Confirmed payments", m.confirmedPayments, "credit-card") + row("General sales", m.sales, "store", "stat-alt") + row("Bar sales", m.barSales, "wine", "stat-alt") + row("Expenses", m.expenses, "trending-down", "stat-danger");
+      $("activity").innerHTML = o.recentActivity.length ? `<div class="panel-body"><div class="activity-feed">` + o.recentActivity.map(a =>
+        `<div class="activity-row"><span class="activity-time">${Utils.timeAgo(a.createdAt)}</span><span class="activity-text"><b>${Utils.esc(a.userName)}</b>${a.userRole ? ` <span class="muted">(${Utils.esc(Auth.roleLabel(a.userRole))})</span>` : ""} — ${Utils.esc(a.action)}</span></div>`).join("") + `</div></div>`
+        : PortalUI.empty("history", "No activity yet", "Actions by managers and staff will appear here.");
+    } catch (e) { $("statsMount").innerHTML = PortalUI.error(e.message); $("activity").innerHTML = ""; }
+  }
+  $("refresh").addEventListener("click", load);
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 60000);
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

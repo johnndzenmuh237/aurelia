@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Managers · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Managers" data-roles="owner">
+  <div id="admin-content">
+
+    <div class="section-head"><div><h2>Manager accounts</h2><p class="muted">Only you can create, change or revoke managers. Revoking never deletes any business record.</p></div>
+      <button class="btn btn-primary" id="newMgr"><i data-icon="user-plus" data-size="16"></i> New manager</button></div>
+    <div class="panel"><div class="table-toolbar"><input id="q" type="search" placeholder="Search name, email, department…" aria-label="Search managers" style="min-width:220px"><select id="st" aria-label="Filter by status"><option value="">All statuses</option><option value="active">Active</option><option value="deactivated">Deactivated</option></select></div>
+      <div class="table-wrap" id="tbl"></div></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const $ = (id) => document.getElementById(id);
+  const esc = PortalUI.esc, ic = PortalUI.ic;
+  let managers = [], DEPTS = {}, PERMS = [];
+  const PERM_LABEL = { view: "View records", create: "Create records", edit: "Edit records", delete: "Delete records", approve: "Approve / manager-level actions" };
+
+  async function load() {
+    $("tbl").innerHTML = PortalUI.loading(5);
+    try {
+      const d = await Utils.api("/owner/managers");
+      managers = d.items; DEPTS = d.departments; PERMS = d.permissions;
+      render();
+    } catch (e) { $("tbl").innerHTML = PortalUI.error(e.message); }
+  }
+  function render() {
+    const q = $("q").value.toLowerCase(), st = $("st").value;
+    const rows = managers.filter(m => (!st || m.status === st) && (!q || [m.fullName, m.email, m.username, ...m.departments.map(d => DEPTS[d])].join(" ").toLowerCase().includes(q)));
+    if (!managers.length) { $("tbl").innerHTML = PortalUI.empty("user-cog", "No managers yet", "Create the first manager account to delegate a department."); return; }
+    if (!rows.length) { $("tbl").innerHTML = PortalUI.empty("search", "No matches", "Try a different search or filter."); return; }
+    $("tbl").innerHTML = `<table class="data-table stack"><thead><tr><th>Manager</th><th>Departments</th><th>Permissions</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>` + rows.map(m => `
+      <tr><td data-label="Manager"><b>${esc(m.fullName)}</b><div class="muted" style="font-size:.78rem">${esc(m.email)}</div></td>
+      <td data-label="Departments"><div class="tags">${m.departments.map(d => `<span class="badge">${esc(DEPTS[d])}</span>`).join("")}</div></td>
+      <td data-label="Permissions" class="muted" style="font-size:.8rem">${m.permissions.join(", ")}</td>
+      <td data-label="Status">${m.status === "active" ? '<span class="badge">Active</span>' : '<span class="badge off">Deactivated</span>'}${m.mustChangePassword ? ' <span class="badge warn">Password change pending</span>' : ""}${m.locked ? ' <span class="badge bad">Locked</span>' : ""}</td>
+      <td data-label="Last sign-in" class="muted" style="font-size:.8rem">${m.lastLoginAt ? Utils.formatDateTime(m.lastLoginAt) : "Never"}</td>
+      <td class="actions"><div class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-a="edit" data-id="${m.id}">${ic("pencil", 15)} Edit</button>
+        <button class="btn btn-ghost btn-sm" data-a="msg" data-id="${m.id}">${ic("message-square", 15)} Message</button>
+        <button class="btn btn-ghost btn-sm" data-a="hist" data-id="${m.id}">${ic("history", 15)} Activity</button>
+        <button class="btn btn-ghost btn-sm" data-a="pw" data-id="${m.id}">${ic("key-round", 15)} Reset password</button>
+        ${m.status === "active" ? `<button class="btn btn-ghost btn-sm" data-a="replace" data-id="${m.id}">${ic("users-round", 15)} Replace</button><button class="btn btn-danger btn-sm" data-a="revoke" data-id="${m.id}">${ic("user-x", 15)} Revoke</button>`
+          : `<button class="btn btn-outline btn-sm" data-a="restore" data-id="${m.id}">${ic("user-check", 15)} Restore</button>`}
+      </div></td></tr>`).join("") + `</tbody></table>`;
+  }
+  $("q").addEventListener("input", render); $("st").addEventListener("change", render);
+
+  function deptChecks(sel = []) { return `<div class="check-grid">` + Object.entries(DEPTS).map(([k, v]) => `<label class="check-item"><input type="checkbox" name="dept" value="${k}" ${sel.includes(k) ? "checked" : ""}> ${esc(v)}</label>`).join("") + `</div>`; }
+  function permChecks(sel = ["view", "create", "edit"]) { return `<div class="check-grid">` + PERMS.map(p => `<label class="check-item"><input type="checkbox" name="perm" value="${p}" ${sel.includes(p) ? "checked" : ""} ${p === "view" ? "disabled checked" : ""}> ${esc(PERM_LABEL[p])}</label>`).join("") + `</div>`; }
+  const picked = (form, n) => [...form.querySelectorAll(`input[name=${n}]:checked`)].map(i => i.value);
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function personFields(m = {}, withPw = true) {
+    return `<div class="field"><label>Full name<span class="req">*</span></label><input name="fullName" value="${esc(m.fullName || "")}" required></div>
+      <div class="field-row"><div class="field"><label>Email<span class="req">*</span></label><input name="email" type="email" value="${esc(m.email || "")}" required><span class="hint">Used to sign in and for password reset codes.</span></div>
+      <div class="field"><label>Phone</label><input name="phone" type="tel" value="${esc(m.phone || "")}"></div></div>
+      ${withPw ? `<div class="field"><label>Username <span class="muted">(optional)</span></label><input name="username" autocomplete="off" placeholder="defaults to the email"></div>
+      ${PortalUI.passwordField({ name: "password", label: "Initial password", meter: true, hint: "The manager must choose their own password at first sign-in." })}` : ""}`;
+  }
+
+  function validatePerson(d, needPw) {
+    if (d.fullName.trim().length < 2) throw new Error("Enter the manager's full name.");
+    if (!EMAIL.test(d.email.trim())) throw new Error("Enter a valid email address.");
+    if (needPw && d.password.length < 10) throw new Error("The initial password must be at least 10 characters.");
+  }
+
+  function createDialog() {
+    const dlg = PortalUI.modal({ title: "New manager", submitText: "Create manager", body: personFields() + `<div class="form-section">Departments</div>${deptChecks()}<div class="form-section">Permissions</div>${permChecks()}`,
+      onSubmit: async (form, close) => {
+        const d = PortalUI.formData(form); validatePerson(d, true);
+        const departments = picked(form, "dept"); if (!departments.length) throw new Error("Assign at least one department.");
+        await Utils.api("/owner/managers", { method: "POST", body: { ...d, departments, permissions: ["view", ...picked(form, "perm")] } });
+        close(); Utils.toast("Manager account created.", "success"); load();
+      } });
+    PortalUI.wirePasswords(dlg.el);
+  }
+  $("newMgr").addEventListener("click", createDialog);
+
+  const byId = (id) => managers.find(m => m.id === id);
+  $("tbl").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const m = byId(b.dataset.id), a = b.dataset.a;
+    if (a === "edit") {
+      PortalUI.modal({ title: "Edit " + m.fullName, body: personFields(m, false) + `<div class="form-section">Departments</div>${deptChecks(m.departments)}<div class="form-section">Permissions</div>${permChecks(m.permissions)}<p class="muted" style="font-size:.8rem;margin-top:12px">Changes apply on the manager's very next request.</p>`,
+        onSubmit: async (form, close) => {
+          const d = PortalUI.formData(form); validatePerson(d, false);
+          const departments = picked(form, "dept"); if (!departments.length) throw new Error("Assign at least one department.");
+          await Utils.api("/owner/managers/" + m.id, { method: "PUT", body: { fullName: d.fullName, email: d.email, phone: d.phone, departments, permissions: ["view", ...picked(form, "perm")] } });
+          close(); Utils.toast("Manager updated.", "success"); load();
+        } });
+    } else if (a === "msg") {
+      location.href = "/portal/messages.html?to=acct:" + m.id;
+    } else if (a === "hist") {
+      const dlg = PortalUI.modal({ title: "Activity — " + m.fullName, hideFooter: true, body: `<div id="h">${PortalUI.loading(4)}</div><p class="muted" style="font-size:.8rem;margin:12px 0 0">Records this manager created stay in the system when the account is deactivated.</p>` });
+      try {
+        const d = await Utils.api("/owner/managers/" + m.id + "/activity");
+        dlg.el.querySelector("#h").innerHTML = d.items.length ? `<div class="activity-feed">` + d.items.map(i => `<div class="activity-row"><span class="activity-time">${Utils.timeAgo(i.createdAt)}</span><span class="activity-text">${esc(i.action)}${i.entityId ? ` <span class="muted">· ${esc(i.entityId)}</span>` : ""}</span></div>`).join("") + `</div>` : PortalUI.empty("history", "No recorded activity yet", "");
+      } catch (err) { dlg.el.querySelector("#h").innerHTML = PortalUI.error(err.message); }
+    } else if (a === "pw") {
+      const dlg = PortalUI.modal({ title: "Reset password — " + m.fullName, submitText: "Reset password", body: `<p class="muted">Set a temporary password. The manager is signed out everywhere and must choose a new one at next sign-in.</p>` + PortalUI.passwordField({ name: "newPassword", label: "Temporary password", meter: true }),
+        onSubmit: async (form, close) => {
+          const d = PortalUI.formData(form); if (d.newPassword.length < 10) throw new Error("Use at least 10 characters.");
+          await Utils.api(`/owner/managers/${m.id}/reset-password`, { method: "POST", body: { newPassword: d.newPassword } });
+          close(); Utils.toast("Password reset.", "success"); load();
+        } });
+      PortalUI.wirePasswords(dlg.el);
+    } else if (a === "revoke") {
+      if (await Utils.confirmDialog({ title: "Revoke access?", message: `${m.fullName} will be signed out immediately and cannot sign in again. All records they created stay exactly as they are.`, confirmText: "Revoke access", danger: true })) {
+        try { await Utils.api(`/owner/managers/${m.id}/status`, { method: "POST", body: { active: false } }); Utils.toast("Access revoked.", "success"); load(); } catch (err) { Utils.toast(err.message, "error"); }
+      }
+    } else if (a === "restore") {
+      try { await Utils.api(`/owner/managers/${m.id}/status`, { method: "POST", body: { active: true } }); Utils.toast("Access restored.", "success"); load(); } catch (err) { Utils.toast(err.message, "error"); }
+    } else if (a === "replace") {
+      const dlg = PortalUI.modal({ title: "Replace " + m.fullName, submitText: "Replace manager", body: `<div class="alert alert-info">${ic("info")}<span>The new manager inherits <b>${m.departments.map(d => esc(DEPTS[d])).join(", ")}</b> and sees all existing records. ${esc(m.fullName)} is deactivated; nothing is deleted.</span></div>` + personFields({}, true),
+        onSubmit: async (form, close) => {
+          const d = PortalUI.formData(form); validatePerson(d, true);
+          await Utils.api(`/owner/managers/${m.id}/replace`, { method: "POST", body: d });
+          close(); Utils.toast("Manager replaced.", "success"); load();
+        } });
+      PortalUI.wirePasswords(dlg.el);
+    }
+  });
+  load();
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

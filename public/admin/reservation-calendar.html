@@ -13,6 +13,12 @@
   .cal-cell{border:1px solid var(--line); padding:6px; min-height:34px; text-align:center}
   .cal-cell.booked{background:#EFEAFB; color:#6C4FBE; font-weight:600; border-radius:4px}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="admin-shell" data-title="Reservation Calendar" data-roles="super_admin,manager,front_desk,reservations">
@@ -54,5 +60,6 @@ async function load() {
   Utils.pollCollection("reservations", (rows) => { reservations = rows; render(); });
 }
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

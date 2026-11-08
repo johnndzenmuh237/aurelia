@@ -6,6 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head><body>
 <div id="app-header"></div>
 <section class="section" style="padding-top:60px">
@@ -19,9 +25,9 @@
         <p><strong>Email</strong><br><a href="mailto:reservations@aureliahotel.com">reservations@aureliahotel.com</a></p>
       </div>
       <form class="card" style="padding:24px" id="contactForm">
-        <div class="field"><label>Name</label><input type="text" name="name" required></div>
-        <div class="field"><label>Email</label><input type="email" name="email" required></div>
-        <div class="field"><label>Message</label><textarea name="message" rows="4" required></textarea></div>
+        <div class="field"><label>Name<span class="req">*</span></label><input type="text" name="name" autocomplete="name" minlength="2" required></div>
+        <div class="field"><label>Email<span class="req">*</span></label><input type="email" name="email" autocomplete="email" required></div>
+        <div class="field"><label>Message<span class="req">*</span></label><textarea name="message" rows="4" minlength="5" maxlength="2000" required></textarea></div>
         <button class="btn btn-primary btn-block" type="submit">Send Message</button>
       </form>
     </div>
@@ -32,16 +38,15 @@
 <script type="module" src="/js/firebase.js"></script>
 <script src="/js/utils.js"></script>
 <script src="/js/auth.js"></script>
+<script src="/js/form-validate.js"></script>
 <script src="/js/layout.js"></script>
 <script>
-document.getElementById("contactForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const body = Object.fromEntries(new FormData(e.target).entries());
-  try {
-    await Utils.api("/guests/create", { method: "POST", auth: false, body: { ...body, type: "contact_message" } });
-    Utils.toast("Message sent — we'll reply by email shortly.", "success");
-    e.target.reset();
-  } catch (err) { Utils.toast(err.message, "error"); }
+const cf = document.getElementById("contactForm");
+FormValidate.attach(cf, async (body) => {
+  await Utils.api("/guests/create", { method: "POST", auth: false, body: { ...body, type: "contact_message" } });
+  Utils.toast("Message sent — we'll reply by email shortly.", "success");
+  cf.reset();
 });
 </script>
+<script src="/js/app-core.js"></script>
 </body></html>

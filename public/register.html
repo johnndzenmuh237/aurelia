@@ -3,28 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create Account · Aurelia Hotel</title>
+<title>Guest Registration · Aurelia Hotel</title>
 <meta name="description" content="Create a guest account at Aurelia Hotel to manage bookings, bills and requests online.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/auth.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
 <main class="auth-shell">
-  <div class="auth-card card">
-    <h1 style="font-size:1.8rem">Create your account</h1>
-    <p class="muted">Book faster next time and manage your stay online.</p>
-    <form id="registerForm">
-      <div class="field"><label>Full Name</label><input type="text" name="fullName" required></div>
-      <div class="field"><label>Email</label><input type="email" name="email" required></div>
-      <div class="field"><label>Phone</label><input type="tel" name="phone" required></div>
-      <div class="field"><label>Password</label><input type="password" name="password" minlength="6" required></div>
-      <div class="form-error hidden" id="regError"></div>
-      <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+  <div class="auth-card card" style="max-width:560px">
+    <h1 style="font-size:1.8rem">Guest registration</h1>
+    <p class="muted">Register your details once and the front desk can prepare your stay faster. Your booking code is all you need to look up a reservation later.</p>
+    <div class="alert alert-ok hidden" id="regOk" role="status"></div>
+    <div class="alert alert-error hidden" id="regError" role="alert"></div>
+    <form id="registerForm" novalidate>
+      <p class="muted" style="font-size:.84rem;margin-bottom:8px">Fields marked <span style="color:var(--danger)">*</span> are required.</p>
+      <div class="form-section" style="margin-top:4px">Contact details</div>
+      <div class="field"><label>Full Name<span class="req">*</span></label><input type="text" name="fullName" autocomplete="name" minlength="2" required></div>
+      <div class="field-row">
+        <div class="field"><label>Email<span class="req">*</span></label><input type="email" name="email" autocomplete="email" required></div>
+        <div class="field"><label>Phone<span class="req">*</span></label><input type="tel" name="phone" autocomplete="tel" placeholder="+237 6 00 00 00 00" required></div>
+      </div>
+      <div class="form-section">About you</div>
+      <div class="field-row">
+        <div class="field"><label>Nationality</label><input type="text" name="nationality" autocomplete="country-name"></div>
+        <div class="field"><label>City</label><input type="text" name="city" autocomplete="address-level2"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>ID document</label><select name="idType"><option value="">Select…</option><option>National ID card</option><option>Passport</option><option>Driving licence</option></select></div>
+        <div class="field"><label>ID number</label><input type="text" name="idNumber" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Bed preference</label><select name="bedPreference"><option value="">No preference</option><option>Single</option><option>Double</option><option>Twin</option></select></div>
+      <div class="field"><label>Special requests</label><textarea name="specialRequests" rows="3" maxlength="600"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Register</button>
     </form>
-    <p class="muted" style="margin-top:16px; text-align:center">Already have an account? <a href="/login.html" style="color:var(--forest); font-weight:600">Sign in</a></p>
+    <p class="muted" style="margin-top:16px; text-align:center">Ready to stay? <a href="/booking.html" style="color:var(--forest); font-weight:600">Book a room</a> · <a href="/track-booking.html" style="color:var(--forest); font-weight:600">Track a booking</a></p>
   </div>
 </main>
 <div id="app-footer"></div>
@@ -32,21 +53,17 @@
 <script type="module" src="/js/firebase.js"></script>
 <script src="/js/utils.js"></script>
 <script src="/js/auth.js"></script>
+<script src="/js/form-validate.js"></script>
 <script src="/js/layout.js"></script>
 <script>
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const errorBox = document.getElementById("regError");
-  errorBox.classList.add("hidden");
-  try {
-    await Auth.register(Object.fromEntries(fd.entries()));
-    window.location.href = "/guest/dashboard.html";
-  } catch (err) {
-    errorBox.textContent = err.message || "Could not create your account. Please try again.";
-    errorBox.classList.remove("hidden");
-  }
-});
+const regForm = document.getElementById("registerForm");
+FormValidate.attach(regForm, async (body) => {
+  await Utils.api("/guests/create", { method: "POST", auth: false, body });
+  const ok = document.getElementById("regOk");
+  ok.textContent = "Thank you — you are registered. Our front desk will have your details ready when you arrive.";
+  ok.classList.remove("hidden"); regForm.reset(); ok.scrollIntoView({ behavior: "smooth", block: "center" });
+}, { errorBox: document.getElementById("regError") });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

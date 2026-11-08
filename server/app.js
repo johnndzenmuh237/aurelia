@@ -3,7 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const { authenticate } = require("./middleware/auth");
-const { requireRole } = require("./middleware/roles");
+const { requireRole, requireOwner, requireAccount } = require("./middleware/roles");
+const { activityTracker } = require("./middleware/activity");
 const { rateLimit } = require("./middleware/rate-limit");
 const { errorHandler } = require("./middleware/error-handler");
 
@@ -16,6 +17,9 @@ const opsControllers = require("./controllers/opsControllers");
 const barController = require("./controllers/barController");
 const dataController = require("./controllers/dataController");
 const financeController = require("./controllers/financeController");
+const ownerController = require("./controllers/ownerController");
+const notificationController = require("./controllers/notificationController");
+const messageController = require("./controllers/messageController");
 
 const app = express();
 // Hides the "X-Powered-By: Express" header and disables Express's debug
@@ -26,12 +30,49 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// Turns every successful business action into targeted notifications and
+// (for personal accounts) an audit-trail entry. Registered before the
+// routes so it can observe each response finishing.
+app.use("/api", activityTracker);
+
 const staff = authenticate(); // required
 const optionalAuth = authenticate({ optional: true }); // guests may be anonymous
 
 // ---------------- Auth ----------------
 app.post("/api/auth/login", rateLimit({ max: 15 }), authController.login);
 app.get("/api/auth/verify", staff, authController.verify);
+
+// ---------------- Personal accounts: owner, managers (added) ----------------
+app.get("/api/owner/status", ownerController.status);
+app.post("/api/owner/setup", rateLimit({ windowMs: 15 * 60_000, max: 8 }), ownerController.setup);
+app.post("/api/owner/login", rateLimit({ windowMs: 15 * 60_000, max: 20 }), ownerController.ownerLogin);
+app.post("/api/auth/manager-login", rateLimit({ windowMs: 15 * 60_000, max: 30 }), ownerController.managerLogin);
+app.post("/api/account/forgot-password", rateLimit({ windowMs: 15 * 60_000, max: 6 }), ownerController.forgotPassword);
+app.post("/api/account/reset-password", rateLimit({ windowMs: 15 * 60_000, max: 10 }), ownerController.resetPassword);
+app.get("/api/account/me", staff, requireAccount, ownerController.me);
+app.post("/api/account/change-password", staff, requireAccount, rateLimit({ windowMs: 15 * 60_000, max: 10 }), ownerController.changePassword);
+
+// Owner-only: manager administration + business overview. Checked here on
+// the server — a manager token can never reach these, whatever the UI shows.
+app.get("/api/owner/overview", staff, requireOwner, ownerController.overview);
+app.get("/api/owner/managers", staff, requireOwner, ownerController.listManagers);
+app.post("/api/owner/managers", staff, requireOwner, ownerController.createManager);
+app.get("/api/owner/managers/:id", staff, requireOwner, ownerController.getManager);
+app.put("/api/owner/managers/:id", staff, requireOwner, ownerController.updateManager);
+app.post("/api/owner/managers/:id/status", staff, requireOwner, ownerController.setManagerStatus);
+app.post("/api/owner/managers/:id/reset-password", staff, requireOwner, ownerController.resetManagerPassword);
+app.post("/api/owner/managers/:id/replace", staff, requireOwner, ownerController.replaceManager);
+app.get("/api/owner/managers/:id/activity", staff, requireOwner, ownerController.managerActivity);
+
+// ---------------- Notifications & internal messaging (added) ----------------
+app.get("/api/notifications", staff, notificationController.list);
+app.post("/api/notifications/read", staff, notificationController.read);
+app.post("/api/notifications/archive", staff, notificationController.archive);
+app.get("/api/messages/recipients", staff, messageController.recipients);
+app.get("/api/messages/conversations", staff, messageController.conversations);
+app.get("/api/messages/conversations/:id", staff, messageController.openConversation);
+app.post("/api/messages/send", staff, rateLimit({ max: 40 }), messageController.send);
+app.post("/api/messages/announce", staff, rateLimit({ max: 20 }), messageController.announce);
 
 // ---------------- Bookings (public + walk-in) ----------------
 app.get("/api/bookings/check-availability", bookingController.checkAvailability);

@@ -21,6 +21,12 @@
 .qty-btn{padding:12px 16px;font-size:1rem;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid var(--line,#2a3040);cursor:pointer;}
 .qty-btn.selected{background:var(--gold,#c9a24d);color:#1a1200;border-color:var(--gold,#c9a24d);}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="admin-shell" data-title="Bar POS — Fast Sell" data-roles="super_admin,manager,restaurant">
@@ -185,5 +191,6 @@ Utils.pollCollection("barSales", (rows) => {
   document.getElementById("todaySummary").textContent = `${bottles} bottles · ${Utils.formatMoney(revenue)}`;
 });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

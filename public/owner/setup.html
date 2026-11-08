@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Setup · Aurelia Hotel</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div class="auth-wrap">
+  <aside class="auth-aside">
+    <div class="brand-row"><span class="brand-mark"></span>Aurelia Hotel</div>
+    <div>
+      <h2>Create the owner account</h2>
+      <p>This is done once. The owner becomes the highest authority in the system and is the only person who can create manager accounts.</p>
+      <ul>
+        <li><i data-icon="shield-check"></i><span>Passwords are stored hashed — never in the code or the browser.</span></li>
+        <li><i data-icon="history"></i><span>Every important action is recorded in the audit trail.</span></li>
+        <li><i data-icon="lock"></i><span>Sessions end automatically after a period of inactivity.</span></li>
+      </ul>
+    </div>
+    <small style="color:#87A99B">&copy; <span id="yr"></span> Aurelia Hotel</small>
+  </aside>
+  <main class="auth-main">
+    <div class="auth-card card" style="padding:34px">
+      <h1 style="font-size:1.7rem">Set up the owner account</h1>
+      <p class="muted">You need the one-time setup token from the server's <code>OWNER_SETUP_TOKEN</code> setting.</p>
+      <div id="blocked" class="alert alert-info hidden"></div>
+      <form id="f" novalidate>
+        <div class="field"><label for="setupToken">Setup token<span class="req" aria-hidden="true">*</span></label><input id="setupToken" name="setupToken" type="password" autocomplete="off" required></div>
+        <div class="form-section">Owner details</div>
+        <div class="field"><label for="fullName">Full name<span class="req" aria-hidden="true">*</span></label><input id="fullName" name="fullName" autocomplete="name" required></div>
+        <div class="field-row">
+          <div class="field"><label for="email">Email<span class="req" aria-hidden="true">*</span></label><input id="email" name="email" type="email" autocomplete="email" required></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+        </div>
+        <div class="form-section">Private password</div>
+        <div id="pwBox"></div>
+        <div class="alert alert-error hidden" id="err" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit" id="go">Create owner account</button>
+      </form>
+      <div class="link-row"><a href="/owner/login.html">Back to owner sign in</a></div>
+    </div>
+  </main>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+document.getElementById("pwBox").innerHTML =
+  PortalUI.passwordField({ name: "password", label: "Password", meter: true, hint: "At least 10 characters with upper case, lower case and a number." }) +
+  PortalUI.passwordField({ name: "confirmPassword", label: "Confirm password" });
+PortalUI.wirePasswords(document);
+Icons.hydrate(document);
+fetch("/api/owner/status").then(r => r.json()).then(s => {
+  const b = document.getElementById("blocked");
+  if (!s.setupRequired) { b.innerHTML = "The owner account is already set up. <a class='text-link' href='/owner/login.html'>Sign in</a>."; b.classList.remove("hidden"); document.getElementById("f").classList.add("hidden"); }
+  else if (!s.setupEnabled) { b.textContent = "Setup is not enabled yet: set OWNER_SETUP_TOKEN in the server environment and restart."; b.classList.remove("hidden"); }
+});
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err"), go = document.getElementById("go");
+  err.classList.add("hidden");
+  const d = PortalUI.formData(e.target);
+  const fail = (m) => { err.textContent = m; err.classList.remove("hidden"); };
+  if (d.fullName.trim().length < 2) return fail("Enter your full name.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email.trim())) return fail("Enter a valid email address.");
+  if (d.password !== d.confirmPassword) return fail("The two passwords do not match.");
+  go.disabled = true; go.textContent = "Creating…";
+  try {
+    const res = await fetch("/api/owner/setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error && data.error.message || "Setup failed.");
+    Auth.replaceSession(data);
+    location.href = "/owner/dashboard.html";
+  } catch (ex) { fail(ex.message); go.disabled = false; go.textContent = "Create owner account"; }
+});
+
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

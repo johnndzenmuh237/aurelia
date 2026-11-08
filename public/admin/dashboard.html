@@ -9,6 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="admin-shell" data-title="Manager Dashboard" data-roles="super_admin,manager,front_desk,accountant">
@@ -222,7 +228,7 @@ async function loadDashboard() {
   try {
     const res = await Utils.api("/reports/ai/insights?period=week");
     const insights = (res.insights || []).slice(0, 3);
-    const emoji = { good: "🟢", warning: "🟡", critical: "🔴" };
+    const emoji = { good: "Good", warning: "Warning", critical: "Critical" };
     document.getElementById("insightsPreview").innerHTML = insights.length
       ? insights.map((i) => `<div class="insight-row insight-${i.level}" style="margin-bottom:14px"><span class="insight-dot"></span><div><div class="insight-title">${emoji[i.level] || ""} ${i.title}</div><p class="insight-message">${i.message}</p></div></div>`).join("")
       : `<div class="empty-state">No insights generated yet. <a href="/admin/ai-insights.html">Generate now →</a></div>`;
@@ -257,5 +263,6 @@ async function loadDashboard() {
   }
 }
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

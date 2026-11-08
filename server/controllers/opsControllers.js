@@ -168,9 +168,18 @@ async function updateEmployee(req, res, next) {
 async function employeeApplications(req, res, next) {
   try {
     if (req.method === "POST") {
-      const { fullName, position } = req.body;
-      if (!fullName || !position) throw new ApiError(400, "fullName and position are required.");
-      const ref = await db.collection("employeeApplications").add({ ...req.body, status: "Received", createdAt: FieldValue.serverTimestamp() });
+      // Public form: validate on the server (never trust the browser) and
+      // store only the known fields so a caller can't inject e.g. a status.
+      const v = require("../utils/validators");
+      const fullName = v.requireName(req.body.fullName);
+      const position = v.text(req.body.position, 80);
+      if (!position) throw new ApiError(400, "Choose the position you are applying for.");
+      const data = {
+        fullName, position, phone: v.requirePhone(req.body.phone), email: v.optionalEmail(req.body.email),
+        ...v.pick(req.body, ["experience", "city", "nationality", "education", "yearsExperience", "availableFrom", "expectedSalary", "languages"]),
+      };
+      Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
+      const ref = await db.collection("employeeApplications").add({ ...data, status: "Received", createdAt: FieldValue.serverTimestamp() });
       return res.status(201).json({ id: ref.id });
     }
     // PUT: approve/hire — automatically creates the employee record (spec §36)

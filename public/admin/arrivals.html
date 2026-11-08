@@ -6,6 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="admin-shell" data-title="Arrivals Today" data-roles="super_admin,manager,front_desk">
@@ -36,7 +42,7 @@ Utils.pollCollection("reservations", (all) => {
         <td style="font-family:var(--font-mono)">${r.reservationCode || r.id}</td>
         <td>${Utils.formatRoomLabel(r.room) || "Unassigned"}</td>
         <td>${Utils.statusChip(r.paymentStatus || "unpaid").outerHTML}</td>
-        <td>${r.vip ? "★ VIP" : "—"}</td>
+        <td>${r.vip ? `${Icons.svg("star",{size:14})} VIP` : "—"}</td>
         <td>${r.specialRequests || "—"}</td>
         <td>${r.status !== "Checked In" ? `<button class="btn btn-sm btn-primary" data-id="${r.id}">Check In</button>` : Utils.statusChip("Checked In").outerHTML}</td>
       </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No arrivals scheduled for today.</div></td></tr>`;
@@ -46,5 +52,6 @@ Utils.pollCollection("reservations", (all) => {
     }));
   });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

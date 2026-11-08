@@ -45,7 +45,7 @@
       <aside class="drawer" id="drawer" aria-hidden="true">
         <div class="drawer-head">
           <span class="brand"><span class="brand-mark"></span>Aurelia</span>
-          <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">✕</button>
+          <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu"><span id="drawerX"></span></button>
         </div>
         <nav>${navHtml()}</nav>
         <div class="drawer-cta">
@@ -55,6 +55,7 @@
       </aside>
     `;
 
+    const dx = document.getElementById("drawerX"); if (dx && window.Icons) dx.innerHTML = Icons.svg("x", { size: 20 });
     const open = () => { document.body.classList.add("drawer-open"); document.getElementById("drawer").setAttribute("aria-hidden", "false"); };
     const close = () => { document.body.classList.remove("drawer-open"); document.getElementById("drawer").setAttribute("aria-hidden", "true"); };
     document.getElementById("drawerOpenBtn").addEventListener("click", open);

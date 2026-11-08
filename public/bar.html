@@ -19,6 +19,12 @@
   .category-tabs button.active{background:var(--forest); color:#fff; border-color:var(--forest)}
   @media(max-width:900px){.drink-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -91,5 +97,6 @@ document.getElementById("categoryTabs").addEventListener("click", (e) => {
   render(btn.dataset.cat);
 });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

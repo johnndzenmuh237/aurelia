@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Notifications" data-roles="">
+  <div id="admin-content">
+
+    <div class="section-head"><div><h2>Notifications</h2><p class="muted">Activity in the departments you are responsible for.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="filter" aria-label="Filter notifications"><option value="all">All</option><option value="unread">Unread only</option><option value="archived">Archived included</option></select><button class="btn btn-outline btn-sm" id="markAll"><i data-icon="check-check" data-size="16"></i> Mark all read</button></div></div>
+    <div class="panel" id="list"></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const $ = (id) => document.getElementById(id), esc = PortalUI.esc;
+  const TYPE = { message: "message-square", new_booking: "bed-double", payment_received: "credit-card", budget_alert: "triangle-alert", contact_message: "mail", activity: "activity" };
+  async function load() {
+    $("list").innerHTML = PortalUI.loading(6);
+    const f = $("filter").value;
+    try {
+      const d = await Utils.api("/notifications?limit=100" + (f === "unread" ? "&unread=1" : "") + (f === "archived" ? "&archived=1" : ""));
+      $("list").innerHTML = d.items.length ? d.items.map(n => `<div class="note-item ${n.read ? "" : "unread"}" style="cursor:default">
+          <span class="note-dot"></span><span class="note-ico">${Icons.svg(TYPE[n.type] || "bell", 16)}</span>
+          <div class="note-body"><div class="note-title">${esc(n.title)}${n.archived ? ' <span class="badge off">Archived</span>' : ""}</div><div class="note-msg">${esc(n.message)}</div>
+          <div class="note-meta"><span>From ${esc(n.senderName)}</span>${n.department ? `<span>${esc(n.department)}</span>` : ""}<span>${Utils.formatDateTime(n.createdAt)}</span></div></div>
+          <div class="row-actions" style="align-items:flex-start">${n.link ? `<button class="btn btn-outline btn-sm" data-open="${esc(n.id)}" data-link="${esc(n.link)}">Open</button>` : ""}
+          ${n.read ? "" : `<button class="btn btn-ghost btn-sm" data-read="${esc(n.id)}">Mark read</button>`}${n.archived ? "" : `<button class="icon-btn" data-arch="${esc(n.id)}" aria-label="Archive">${Icons.svg("archive", 16)}</button>`}</div></div>`).join("")
+        : PortalUI.empty("inbox", "No notifications", "When something happens in your departments, you'll see it here.");
+    } catch (e) { $("list").innerHTML = PortalUI.error(e.message); }
+  }
+  $("filter").addEventListener("change", load);
+  $("markAll").addEventListener("click", async () => { await Utils.api("/notifications/read", { method: "POST", body: { all: true } }); Utils.toast("All marked as read.", "success"); load(); window.__refreshBell && window.__refreshBell(); });
+  $("list").addEventListener("click", async (e) => {
+    const o = e.target.closest("[data-open]"), r = e.target.closest("[data-read]"), a = e.target.closest("[data-arch]");
+    try {
+      if (o) { await Utils.api("/notifications/read", { method: "POST", body: { ids: [o.dataset.open] } }); location.href = o.dataset.link; return; }
+      if (r) await Utils.api("/notifications/read", { method: "POST", body: { ids: [r.dataset.read] } });
+      if (a) await Utils.api("/notifications/archive", { method: "POST", body: { ids: [a.dataset.arch] } });
+      if (r || a) { load(); window.__refreshBell && window.__refreshBell(); }
+    } catch (err) { Utils.toast(err.message, "error"); }
+  });
+  load(); setInterval(() => { if (!document.hidden) load(); }, 30000);
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

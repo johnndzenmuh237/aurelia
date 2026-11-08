@@ -98,7 +98,18 @@ const Utils = (() => {
     try { data = await res.json(); } catch (_) { /* no body */ }
     if (!res.ok) {
       const message = data?.error?.message || "Something went wrong. Please try again.";
-      throw new Error(message);
+      // A signed-in request that comes back 401 means the session ended —
+      // expired, signed out elsewhere, or the owner revoked this account.
+      if (res.status === 401 && auth && typeof Auth !== "undefined" && Auth.getToken()) {
+        Auth.logout("expired");
+      }
+      if (res.status === 403 && data?.error?.details?.code === "PASSWORD_CHANGE_REQUIRED" && typeof Auth !== "undefined") {
+        const s = Auth.getSession(); if (s) { s.mustChangePassword = true; Auth.replaceSession({ ...s }); }
+        window.location.href = "/portal/account.html?force=1";
+      }
+      const err = new Error(message);
+      err.status = res.status;
+      throw err;
     }
     return data;
   }
@@ -143,5 +154,46 @@ const Utils = (() => {
       .join("");
   }
 
-  return { formatMoney, formatDate, formatDateTime, nightsBetween, formatRoomLabel, toast, statusChip, qs, api, pollCollection, debounce, skeletonRows, getIdToken };
+  /** Escapes text for safe use inside innerHTML. */
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  /** "5 min ago", "Yesterday 14:05" … for notification and message times. */
+  function timeAgo(iso) {
+    if (!iso) return "";
+    const d = new Date(iso); if (isNaN(d)) return "";
+    const s = Math.round((Date.now() - d.getTime()) / 1000);
+    if (s < 45) return "just now";
+    if (s < 3600) return `${Math.round(s / 60)} min ago`;
+    if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+    return d.toLocaleString(window.HOTEL_CONFIG?.locale || "en-CM", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+
+  /** Normalises Firestore timestamps ({_seconds}) and strings to a Date. */
+  function toDate(v) {
+    if (!v) return null;
+    if (v._seconds !== undefined) return new Date(v._seconds * 1000);
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
+
+  /** Accessible confirm dialog (replaces window.confirm). Resolves true/false. */
+  function confirmDialog({ title = "Are you sure?", message = "", confirmText = "Confirm", danger = false } = {}) {
+    return new Promise((resolve) => {
+      const wrap = document.createElement("div");
+      wrap.className = "dlg-scrim";
+      wrap.innerHTML = `<div class="dlg sm" role="alertdialog" aria-modal="true" aria-labelledby="cdT"><div class="dlg-head"><h3 id="cdT">${esc(title)}</h3></div><div class="dlg-body"><p style="margin:0">${esc(message)}</p></div><div class="dlg-foot"><button class="btn btn-ghost" data-r="0">Cancel</button><button class="btn ${danger ? "btn-danger" : "btn-primary"}" data-r="1">${esc(confirmText)}</button></div></div>`;
+      const done = (v) => { document.removeEventListener("keydown", onKey); wrap.remove(); resolve(v); };
+      const onKey = (e) => { if (e.key === "Escape") done(false); };
+      wrap.addEventListener("click", (e) => { if (e.target === wrap) done(false); const b = e.target.closest("[data-r]"); if (b) done(b.dataset.r === "1"); });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(wrap);
+      wrap.querySelector("[data-r='1']").focus();
+    });
+  }
+
+  return { esc, timeAgo, toDate, confirmDialog, formatMoney, formatDate, formatDateTime, nightsBetween, formatRoomLabel, toast, statusChip, qs, api, pollCollection, debounce, skeletonRows, getIdToken };
 })();
+
+window.Utils = Utils;

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manager Dashboard · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Manager Dashboard" data-roles="">
+  <div id="admin-content">
+
+    <div class="section-head"><div><h2 id="hello">Welcome</h2><p class="muted" id="sub"></p></div><button class="btn btn-gold btn-sm" data-install-btn hidden><i data-icon="download" data-size="16"></i> Install app</button></div>
+    <div class="stat-grid three" id="stats"></div>
+    <div class="two-col">
+      <div class="panel"><div class="panel-head"><h3>Your departments</h3></div><div class="panel-body"><div class="link-grid" id="links"></div></div></div>
+      <div class="panel"><div class="panel-head"><h3>Latest notifications</h3><a class="btn btn-ghost btn-sm" href="/portal/notifications.html">View all</a></div><div id="notes"><div style="padding:20px"><div class="skeleton" style="height:60px"></div></div></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const $ = (id) => document.getElementById(id), esc = PortalUI.esc;
+  const s = Auth.getSession();
+  if (s.role !== "manager" || !s.accountId) { location.replace(Auth.homeFor()); return; }
+  $("hello").textContent = "Welcome, " + s.name;
+  $("sub").textContent = (s.departments || []).map(d => Auth.DEPARTMENTS[d]).join(" · ") || "No departments assigned yet — contact the owner.";
+  // Pages the manager's departments open, taken from the same role map the sidebar uses.
+  const seen = new Set(), tiles = [];
+  (window.ADMIN_NAV || []).forEach(sec => sec.items.forEach(i => {
+    const r = (window.ADMIN_PAGE_ROLES || {})[i.href];
+    if (r && Auth.can(r) && !seen.has(i.href) && !/dashboard|notifications|audit|settings/.test(i.href)) { seen.add(i.href); tiles.push([i.href, i.label, i.icon, sec.group || "General"]); }
+  }));
+  $("links").innerHTML = tiles.length ? tiles.map(t => `<a class="link-tile" href="${t[0]}"><span class="ti">${Icons.svg(t[2])}</span><div><b>${esc(t[1])}</b><span>${esc(t[3])}</span></div></a>`).join("") : PortalUI.empty("building-2", "Nothing assigned", "The owner has not given this account any departments.");
+  async function load() {
+    try {
+      const [n, m] = await Promise.all([Utils.api("/notifications?limit=6"), Utils.api("/messages/conversations")]);
+      $("stats").innerHTML = [
+        ["Unread notifications", n.unreadCount, "bell", n.unreadCount ? "stat-warn" : ""], ["Unread conversations", m.unreadCount, "messages-square", m.unreadCount ? "stat-warn" : ""], ["Departments managed", (s.departments || []).length, "building-2", "stat-alt"],
+      ].map(c => `<div class="stat-card ${c[3]}"><div class="stat-label">${c[0]}</div><div class="stat-value">${c[1]}</div><span class="stat-ico">${Icons.svg(c[2])}</span></div>`).join("");
+      $("notes").innerHTML = n.items.length ? n.items.map(x => `<a class="note-item ${x.read ? "" : "unread"}" href="${esc(x.link || "/portal/notifications.html")}" style="text-decoration:none"><span class="note-dot"></span><span class="note-body"><span class="note-title">${esc(x.title)}</span><span class="note-msg" style="display:block">${esc(x.message)}</span><span class="note-meta"><span>${esc(x.senderName)}</span><span>${Utils.timeAgo(x.createdAt)}</span></span></span></a>`).join("") : PortalUI.empty("inbox", "You're all caught up", "New activity in your departments shows up here.");
+    } catch (e) { $("stats").innerHTML = ""; $("notes").innerHTML = PortalUI.error(e.message); }
+  }
+  load(); setInterval(() => { if (!document.hidden) load(); }, 30000);
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

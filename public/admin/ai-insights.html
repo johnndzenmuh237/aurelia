@@ -6,6 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="admin-shell" data-title="AI Business Insights" data-roles="super_admin,manager">
@@ -55,7 +61,7 @@ function renderInsights(insights) {
     grid.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty-state">No insights yet for this period. Click “Refresh Analysis” to generate your first business analysis.</div></div>`;
     return;
   }
-  const emoji = { good: "🟢", warning: "🟡", critical: "🔴" };
+  const emoji = { good: "Good", warning: "Warning", critical: "Critical" };
   grid.innerHTML = insights.map((i) => `
     <div class="card insight-card">
       <div class="insight-row insight-${i.level}">
@@ -91,5 +97,6 @@ document.getElementById("refreshBtn").addEventListener("click", async () => {
 
 loadInsights();
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

@@ -60,8 +60,16 @@ async function createGuestOrRequest(req, res, next) {
     // Contact form / careers / guest-request submissions all land through
     // this one public endpoint, routed by `type`, so the public site never
     // needs an authenticated call just to reach the front desk.
+    const v = require("../utils/validators");
     if (type === "contact_message") {
-      await db.collection("notifications").add({ type: "contact_message", message: `${data.name}: ${data.message}`, read: false, createdAt: new Date() });
+      const name = v.requireName(data.name, "Name");
+      const email = v.optionalEmail(data.email);
+      const message = v.text(data.message, 2000);
+      if (!message) throw new ApiError(400, "Please write a message.");
+      await db.collection("notifications").add({
+        type: "contact_message", title: "New website message", message: `${name}${email ? ` <${email}>` : ""}: ${message}`, read: false, createdAt: new Date(),
+        audienceKeys: ["dept:front_desk", "role:front_desk", "role:manager"], private: false, senderName: name, readBy: [], archivedBy: [], link: "/admin/notifications.html",
+      });
       return res.json({ ok: true });
     }
     if (type === "guest_request") {
@@ -69,7 +77,22 @@ async function createGuestOrRequest(req, res, next) {
       const ref = await db.collection("guestRequests").add({ ...data, guestUid: uid, status: "pending", createdAt: new Date() });
       return res.status(201).json({ id: ref.id });
     }
-    res.status(201).json(await guestsCrud.create(data, req.user?.uid));
+    // Anonymous visitors (guest registration) may only supply profile
+    // fields — never tier, spend, codes or anything else staff-owned.
+    const clean = req.user
+      ? data
+      : {
+          fullName: v.requireName(data.fullName), phone: v.requirePhone(data.phone), email: v.optionalEmail(data.email),
+          ...v.pick(data, ["nationality", "city", "country", "bedPreference", "idType", "idNumber", "dateOfBirth", "specialRequests"]),
+          tier: "standard", source: "website_registration",
+        };
+    if (req.user) {
+      if (data.fullName !== undefined) v.requireName(data.fullName);
+      if (data.email) v.optionalEmail(data.email);
+      if (data.phone) v.optionalPhone(data.phone);
+    }
+    Object.keys(clean).forEach((k) => clean[k] === undefined && delete clean[k]);
+    res.status(201).json(await guestsCrud.create(clean, req.user?.uid));
   } catch (err) { next(err); }
 }
 async function updateGuest(req, res, next) {

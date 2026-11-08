@@ -13,6 +13,12 @@
   .gal-item:hover img{transform:scale(1.08)}
   @media(max-width:700px){.gal-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head><body>
 <div id="app-header"></div>
 <section class="section" style="padding-top:60px">
@@ -35,4 +41,5 @@ document.getElementById("galGrid").innerHTML = seeds.map((s) =>
   `<div class="gal-item"><img src="https://picsum.photos/seed/aurelia-gallery-${s}/500/500" alt="Aurelia Hotel — ${s.replace("-", " ")}" loading="lazy"></div>`
 ).join("");
 </script>
+<script src="/js/app-core.js"></script>
 </body></html>

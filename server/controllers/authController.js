@@ -15,6 +15,7 @@ const VALID_ROLES = Object.keys(env.roles.passwords);
  */
 async function login(req, res, next) {
   try {
+    if (env.disableSharedLogin) throw new ApiError(403, "Shared-password sign-in has been turned off. Use your personal account.");
     const { role, password, name } = req.body;
     if (!role || !password) throw new ApiError(400, "role and password are required.");
     if (!VALID_ROLES.includes(role)) throw new ApiError(400, `Unknown role. Must be one of: ${VALID_ROLES.join(", ")}`);
@@ -41,7 +42,8 @@ async function login(req, res, next) {
 async function verify(req, res, next) {
   try {
     if (!req.user) throw new ApiError(401, "Not authenticated.");
-    res.json({ user: { role: req.user.role, name: req.user.name } });
+    const u = req.user;
+    res.json({ user: { role: u.role, name: u.name, accountId: u.accountId || null, departments: u.departments || [], permissions: u.permissions || [] } });
   } catch (err) { next(err); }
 }
 

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Records · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Business Records" data-roles="owner">
+  <div id="admin-content">
+
+    <div class="section-head"><div><h2>Business records</h2><p class="muted">Open the actual records from every section, not only totals.</p></div></div>
+    <div class="panel"><div class="table-toolbar"><label class="sr-only" for="coll">Section</label><select id="coll"></select><input id="q" type="search" placeholder="Search in these records…" aria-label="Search records" style="min-width:220px"><span class="spacer"></span><span class="muted" id="count"></span></div>
+      <div class="table-wrap" id="tbl"></div><div class="pagination" id="pager"></div></div>
+    <div id="detailMount"></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+
+  const $ = (id) => document.getElementById(id), esc = PortalUI.esc;
+  const GROUPS = {
+    "People & access": [["staffAccounts","Owner & manager accounts"],["employees","Employees"],["employeeApplications","Job applications"],["employeeAttendance","Attendance"],["schedules","Schedules"],["departments","Departments"],["positions","Positions"]],
+    "Guests & reservations": [["reservations","Reservations"],["guests","Guests"],["guestRequests","Guest requests"],["corporateAccounts","Corporate accounts"],["groupBookings","Group bookings"],["events","Events"],["rooms","Rooms"],["roomTypes","Room types"]],
+    "Restaurant & bar": [["orders","Restaurant orders"],["menuItems","Menu"],["restaurantTables","Tables"],["barSales","Bar sales"],["barInventory","Bar inventory"],["barInventoryTransactions","Bar restocks"],["barStockAdjustments","Bar adjustments"]],
+    "Inventory & suppliers": [["inventoryItems","Inventory items"],["inventoryTransactions","Stock movements"],["suppliers","Suppliers"],["purchaseOrders","Purchases"]],
+    "Money": [["payments","Payments"],["invoices","Invoices"],["refunds","Refunds"],["expenses","Expenses"],["sales","Sales"],["creditTransactions","Credit sales (debts)"],["creditPayments","Debt payments"],["budgets","Budgets"],["payroll","Payroll"],["salaryPayments","Salary payments"],["salaryHistory","Salary history"],["folioItems","Folio items"]],
+    "Housekeeping & maintenance": [["housekeepingTasks","Housekeeping tasks"],["maintenanceRequests","Maintenance requests"],["laundryOrders","Laundry"],["lostAndFound","Lost & found"],["minibarItems","Minibar"]],
+    "Communication & oversight": [["notifications","Notifications"],["conversations","Conversations"],["messages","Messages"],["auditLogs","Audit logs"],["whatsappLogs","WhatsApp log"]],
+  };
+  $("coll").innerHTML = Object.entries(GROUPS).map(([g, items]) => `<optgroup label="${g}">${items.map(i => `<option value="${i[0]}">${i[1]}</option>`).join("")}</optgroup>`).join("");
+  const want = new URLSearchParams(location.search).get("c"); if (want) $("coll").value = want;
+  if ($("coll").value !== (want || $("coll").value)) $("coll").selectedIndex = 0;
+
+  let rows = [], page = 1; const PER = 25;
+  const HIDE = new Set(["id"]);
+  const isTs = (v) => v && typeof v === "object" && v._seconds !== undefined;
+  function cell(v) {
+    if (v == null || v === "") return '<span class="muted">—</span>';
+    if (isTs(v)) return esc(PortalUI.when(v));
+    if (Array.isArray(v)) return v.length ? esc(v.map(x => typeof x === "object" ? JSON.stringify(x) : x).join(", ")).slice(0, 140) : '<span class="muted">—</span>';
+    if (typeof v === "object") return '<span class="muted">{…}</span>';
+    if (typeof v === "boolean") return v ? "Yes" : "No";
+    if (typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v)) return esc(PortalUI.when(v));
+    return esc(String(v)).slice(0, 140);
+  }
+  async function load() {
+    $("tbl").innerHTML = PortalUI.loading(6); $("pager").innerHTML = ""; page = 1;
+    try { rows = (await Utils.api("/staff/data/" + $("coll").value)).items; }
+    catch (e) { $("tbl").innerHTML = PortalUI.error(e.message); return; }
+    const t = (r) => { const c = r.createdAt; return isTs(c) ? c._seconds * 1000 : c ? new Date(c).getTime() || 0 : 0; };
+    rows.sort((a, b) => t(b) - t(a));
+    render();
+  }
+  function render() {
+    const q = $("q").value.toLowerCase();
+    const f = q ? rows.filter(r => JSON.stringify(r).toLowerCase().includes(q)) : rows;
+    $("count").textContent = f.length + " record" + (f.length === 1 ? "" : "s");
+    if (!f.length) { $("tbl").innerHTML = PortalUI.empty("folder-open", rows.length ? "No matches" : "No records yet", rows.length ? "Try a different search." : "Nothing has been recorded in this section."); $("pager").innerHTML = ""; return; }
+    const cols = []; f.slice(0, 50).forEach(r => Object.keys(r).forEach(k => { if (!HIDE.has(k) && typeof r[k] !== "object" || isTs(r[k])) if (!cols.includes(k)) cols.push(k); }));
+    const shown = cols.slice(0, 7);
+    const pages = Math.ceil(f.length / PER); page = Math.min(page, pages);
+    const slice = f.slice((page - 1) * PER, page * PER);
+    $("tbl").innerHTML = `<table class="data-table stack"><thead><tr>${shown.map(c => `<th>${esc(c)}</th>`).join("")}<th></th></tr></thead><tbody>` +
+      slice.map((r, i) => `<tr>${shown.map(c => `<td data-label="${esc(c)}">${cell(r[c])}</td>`).join("")}<td class="actions"><button class="btn btn-ghost btn-sm" data-i="${(page - 1) * PER + i}">${PortalUI.ic("eye", 15)} Open</button></td></tr>`).join("") + `</tbody></table>`;
+    $("pager").innerHTML = pages > 1 ? Array.from({ length: Math.min(pages, 12) }, (_, i) => `<button class="${i + 1 === page ? "active" : ""}" data-p="${i + 1}" aria-label="Page ${i + 1}">${i + 1}</button>`).join("") : "";
+    window.__f = f;
+  }
+  $("pager").addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (b) { page = +b.dataset.p; render(); } });
+  $("tbl").addEventListener("click", e => {
+    const b = e.target.closest("[data-i]"); if (!b) return;
+    const r = window.__f[+b.dataset.i];
+    const dd = Object.entries(r).map(([k, v]) => `<tr><th style="width:34%;text-align:left;vertical-align:top;padding:8px 10px;font-size:.78rem">${esc(k)}</th><td style="padding:8px 10px;overflow-wrap:anywhere;font-size:.86rem">${isTs(v) ? esc(PortalUI.when(v)) : typeof v === "object" && v !== null ? `<pre style="margin:0;white-space:pre-wrap;font-size:.78rem">${esc(JSON.stringify(v, null, 2))}</pre>` : esc(String(v ?? "—"))}</td></tr>`).join("");
+    PortalUI.modal({ title: "Record " + r.id, hideFooter: true, body: `<table class="data-table" style="min-width:0"><tbody>${dd}</tbody></table>` });
+  });
+  $("coll").addEventListener("change", () => { history.replaceState(null, "", "?c=" + $("coll").value); load(); });
+  $("q").addEventListener("input", Utils.debounce(() => { page = 1; render(); }, 200));
+  load();
+
+  Icons.hydrate(document);
+});
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>

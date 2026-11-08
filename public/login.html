@@ -10,6 +10,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/auth.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -17,7 +23,20 @@
 <main class="auth-shell">
   <div class="auth-card card">
     <h1 style="font-size:1.8rem">Staff Sign In</h1>
-    <p class="muted">Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
+    <div id="reasonBox"></div>
+    <div class="guest-tabs" role="tablist" aria-label="Sign-in method" style="margin-bottom:18px">
+      <a href="#" role="tab" id="tabTeam" class="active" aria-selected="true">Team password</a>
+      <a href="#" role="tab" id="tabMgr" aria-selected="false">Manager account</a>
+    </div>
+    <form id="mgrForm" class="hidden" novalidate>
+      <p class="muted">Managers sign in with the personal account the business owner created for them.</p>
+      <div class="field"><label for="mIdent">Email or username<span class="req" aria-hidden="true">*</span></label><input id="mIdent" name="identifier" autocomplete="username" required></div>
+      <div class="field"><label for="mPass">Password<span class="req" aria-hidden="true">*</span></label><input id="mPass" type="password" name="password" autocomplete="current-password" required></div>
+      <div class="form-error hidden" id="mgrError" role="alert"></div>
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      <p class="form-note" style="margin-top:14px"><a href="/portal/reset-password.html" style="color:var(--forest);font-weight:600">Forgot password?</a> · <a href="/owner/login.html" style="color:var(--forest);font-weight:600">Business owner sign in</a></p>
+    </form>
+    <p class="muted" id="teamLead">Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
     <form id="loginForm">
       <div class="field"><label>Team / Role</label>
         <select name="role" required>
@@ -51,6 +70,30 @@
 <script src="/js/auth.js"></script>
 <script src="/js/layout.js"></script>
 <script>
+(function () {
+  const r = new URLSearchParams(location.search).get("reason");
+  const m = { idle: "You were signed out after a period of inactivity.", expired: "Your session ended or your access changed. Please sign in again." }[r];
+  if (m) document.getElementById("reasonBox").innerHTML = '<div class="alert alert-info"><span>' + m + "</span></div>";
+  const tabs = { team: ["tabTeam", "loginForm"], mgr: ["tabMgr", "mgrForm"] };
+  function show(k) {
+    Object.entries(tabs).forEach(([key, [t, f]]) => { document.getElementById(t).classList.toggle("active", key === k); document.getElementById(t).setAttribute("aria-selected", key === k); document.getElementById(f).classList.toggle("hidden", key !== k); });
+    document.getElementById("teamLead").classList.toggle("hidden", k !== "team");
+  }
+  document.getElementById("tabTeam").addEventListener("click", (e) => { e.preventDefault(); show("team"); });
+  document.getElementById("tabMgr").addEventListener("click", (e) => { e.preventDefault(); show("mgr"); });
+  document.getElementById("mgrForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const box = document.getElementById("mgrError"); box.classList.add("hidden");
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    if (!d.identifier.trim() || !d.password) { box.textContent = "Enter your email or username and your password."; box.classList.remove("hidden"); return; }
+    try {
+      const res = await Auth.loginAccount("manager", d.identifier.trim(), d.password);
+      window.location.href = res.mustChangePassword ? "/portal/account.html?force=1" : (Utils.qs("next") || Auth.homeFor());
+    } catch (err) { box.textContent = err.message; box.classList.remove("hidden"); }
+  });
+})();
+</script>
+<script>
 const ROLE_DEST = {
   super_admin: "/admin/dashboard.html", manager: "/admin/dashboard.html",
   front_desk: "/admin/dashboard.html", reservations: "/admin/reservations.html",
@@ -73,5 +116,6 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   }
 });
 </script>
+<script src="/js/app-core.js"></script>
 </body>
 </html>

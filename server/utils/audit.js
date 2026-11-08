@@ -11,6 +11,8 @@ async function logAction({ user, action, entity, entityId, previousValue, newVal
   await db.collection("auditLogs").add({
     userId: user?.uid || "system",
     userName: user?.name || user?.email || "System",
+    userRole: user?.role || null,
+    accountId: user?.accountId || null,
     action,
     entity,
     entityId: entityId || null,
