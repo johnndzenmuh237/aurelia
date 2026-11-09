@@ -19,6 +19,23 @@ const DEPARTMENTS = {
   accountant:   "Finance & Accounts",
 };
 
+// Job roles a manager can give a team member. A role only pre-selects sensible
+// departments in the form; what the person can really open is decided on the
+// server by their departments and permissions.
+const STAFF_JOB_ROLES = {
+  "Receptionist":     ["front_desk", "reservations"],
+  "Cashier":          ["accountant"],
+  "Accountant":       ["accountant"],
+  "Housekeeping":     ["housekeeping"],
+  "Restaurant staff": ["restaurant"],
+  "Maintenance":      ["maintenance"],
+  "HR officer":       ["hr"],
+  "Security":         [],
+  "Other":            [],
+};
+// Team members may never delete records or approve things.
+const STAFF_PERMISSIONS = ["view", "create", "edit"];
+
 // Everything an individual manager account may be granted.
 const MANAGER_PERMISSIONS = ["view", "create", "edit", "delete", "approve"];
 const METHOD_PERMISSION = { GET: "view", HEAD: "view", POST: "create", PUT: "edit", PATCH: "edit", DELETE: "delete" };
@@ -158,6 +175,7 @@ const ACTIVITY_RULES = [
 ];
 
 module.exports = {
+  STAFF_JOB_ROLES, STAFF_PERMISSIONS,
   DEPARTMENTS, MANAGER_PERMISSIONS, METHOD_PERMISSION, STAFF_ROLES,
   COLLECTION_ROLES, OWNER_EXTRA_COLLECTIONS, canReadCollection, ACTIVITY_RULES,
 };

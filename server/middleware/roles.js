@@ -48,4 +48,12 @@ function requireAccount(req, res, next) {
   return next(new ApiError(403, "This feature needs a personal account."));
 }
 
-module.exports = { requireRole, requireOwner, requireAccount };
+/** Owner, or a manager account whose owner has allowed her to run a team. */
+function requireTeamManager(req, res, next) {
+  const u = req.user || {};
+  if (u.role === "owner" || (u.accountId && u.canManageTeam)) return next();
+  return next(new ApiError(403, "Your account is not allowed to manage team accounts."));
+}
+
+module.exports = {
+  requireTeamManager, requireRole, requireOwner, requireAccount };

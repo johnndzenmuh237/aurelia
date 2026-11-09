@@ -4,7 +4,7 @@ const { ApiError } = require("../utils/errors");
 const { METHOD_PERMISSION } = require("../config/access");
 
 // Paths every signed-in person needs regardless of department permissions.
-const PERMISSION_EXEMPT = [/^\/api\/auth\//, /^\/api\/account\//, /^\/api\/messages/, /^\/api\/notifications/, /^\/api\/owner\//];
+const PERMISSION_EXEMPT = [/^\/api\/team/, /^\/api\/auth\//, /^\/api\/account\//, /^\/api\/messages/, /^\/api\/notifications/, /^\/api\/owner\//];
 
 /**
  * Verifies the Bearer JWT and attaches req.user.
@@ -45,6 +45,8 @@ function authenticate({ optional = false } = {}) {
           uid: `acct:${acct.id}`, key: `acct:${acct.id}`, accountId: acct.id,
           role: acct.role, name: acct.fullName, email: acct.email,
           departments: acct.departments || [], permissions: acct.permissions || [],
+          tier: acct.tier || (acct.role === "manager" ? "manager" : acct.role),
+          canManageTeam: acct.role === "manager" && acct.tier !== "staff" && acct.canManageTeam !== false,
           mustChangePassword: Boolean(acct.mustChangePassword),
         };
         req.userProfile = { role: acct.role, fullName: acct.fullName };

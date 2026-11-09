@@ -140,18 +140,33 @@
   /* 2. PWA: service worker + install prompt                            */
   /* ------------------------------------------------------------------ */
   const INSTALL_KEY = "aurelia_install"; // { state: "installed" | "dismissed", at: ms }
-  const DISMISS_DAYS = 14;
+  const DISMISS_KEY = "aurelia_install_dismissed"; // per browser session: the prompt comes back next visit
+  const INSTALLED_DAYS = 30;
   let deferredPrompt = null;
 
   const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   function installState() { try { return JSON.parse(lsGet(INSTALL_KEY) || "null"); } catch (e) { return null; } }
-  function setInstallState(state) { lsSet(INSTALL_KEY, JSON.stringify({ state: state, at: Date.now() })); }
-  function shouldOffer() {
-    if (isStandalone()) return false;
+  function setInstallState(state) {
+    if (state === "dismissed") { try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch (e) { /* ignore */ } return; }
+    lsSet(INSTALL_KEY, JSON.stringify({ state: state, at: Date.now() }));
+  }
+  function dismissedThisSession() { try { return sessionStorage.getItem(DISMISS_KEY) === "1"; } catch (e) { return false; } }
+  // The browser only fires beforeinstallprompt when the app is NOT installed, so
+  // that event always wins over a stale "installed" note (e.g. after uninstalling).
+  function shouldOffer(browserSaysInstallable) {
+    if (isStandalone() || dismissedThisSession()) return false;
+    if (browserSaysInstallable) return true;
     const st = installState();
-    if (!st) return true;
-    if (st.state === "installed") return false;
-    return Date.now() - st.at > DISMISS_DAYS * 86400000;
+    return !(st && st.state === "installed" && Date.now() - st.at < INSTALLED_DAYS * 86400000);
+  }
+
+  /* Tells Android and iPhone/iPad to open the installed app full screen, with no
+   * browser bar. Added here so every page gets it without editing each file. */
+  function appMeta() {
+    [["mobile-web-app-capable", "yes"], ["apple-mobile-web-app-capable", "yes"], ["apple-mobile-web-app-status-bar-style", "black"], ["apple-mobile-web-app-title", "Aurelia PMS"]].forEach(function (m) {
+      if (document.querySelector('meta[name="' + m[0] + '"]')) return;
+      const el = document.createElement("meta"); el.name = m[0]; el.content = m[1]; document.head.appendChild(el);
+    });
   }
 
   function registerSW() {
@@ -177,7 +192,7 @@
     if (p.ios) return "Tap the Share button, then “Add to Home Screen”.";
     if (p.inApp) return "Open this page in Chrome first (menu ⋮ → “Open in browser”), then choose “Install app”.";
     if (p.android) return "Tap the menu ⋮ in your browser, then “Install app” or “Add to Home screen”.";
-    return "Use your browser’s menu and choose “Install app” or “Add to Home screen”.";
+    return "Click the install icon at the right end of the address bar, or open the browser menu and choose “Install Aurelia PMS”.";
   }
 
   function showInstallCard(mode) {
@@ -216,11 +231,24 @@
     document.querySelectorAll("[data-install-btn]").forEach(function (b) { b.hidden = isStandalone(); });
   }
 
+  /* A permanent "Install" button on every signed-in page (owner, manager, staff,
+   * admin). It is hidden only when the app is already running as an installed app. */
+  function mountInstallPill() {
+    if (isStandalone() || document.getElementById("installPill")) return;
+    const host = document.getElementById("bellMount") || document.querySelector(".header-actions");
+    if (!host) return;
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "installPill"; b.className = "install-pill"; b.setAttribute("data-install-btn", "");
+    b.setAttribute("aria-label", "Install the Aurelia app");
+    b.innerHTML = icon("download", 16) + "<span>Install app</span>";
+    host.insertBefore(b, host.firstChild);
+  }
+
   window.addEventListener("beforeinstallprompt", function (e) {
     e.preventDefault();
     deferredPrompt = e;
     refreshInstallButtons();
-    if (shouldOffer()) setTimeout(function () { if (deferredPrompt) showInstallCard("native"); }, 1200);
+    if (shouldOffer(true)) setTimeout(function () { if (deferredPrompt) showInstallCard("native"); }, 1200);
   });
   window.addEventListener("appinstalled", function () {
     deferredPrompt = null; setInstallState("installed");
@@ -239,7 +267,7 @@
    * the card with the exact steps for this device. Runs on every page,
    * signed in or not. Desktop browsers without the event are left alone. */
   function installFallback() {
-    if (isStandalone() || !shouldOffer() || !platform().mobile) return;
+    if (isStandalone() || !shouldOffer(false) || !platform().mobile) return;
     setTimeout(function () { if (!deferredPrompt && !isStandalone()) showInstallCard("guide"); }, 3500);
   }
 
@@ -276,9 +304,10 @@
   }
 
   function boot() {
+    appMeta();
     registerSW();
     if (window.Icons && window.Icons.hydrate) window.Icons.hydrate(document);
-    if (readSession()) { mountBell(); publicHeader(); idleWatch(); }
+    if (readSession()) { mountBell(); mountInstallPill(); publicHeader(); idleWatch(); }
     refreshInstallButtons();
     installFallback();
   }

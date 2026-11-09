@@ -57,6 +57,7 @@ const Auth = (() => {
     saveSession({
       token: data.token, role: data.role, name: data.name, email: data.email || null, accountId: data.accountId || null,
       departments: data.departments || [], permissions: data.permissions || [],
+      tier: data.tier || null, staffRole: data.staffRole || null, canManageTeam: Boolean(data.canManageTeam),
       mustChangePassword: Boolean(data.mustChangePassword), idleTimeoutMinutes: data.idleTimeoutMinutes || null,
       startedAt: Date.now(),
     });

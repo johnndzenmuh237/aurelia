@@ -25,19 +25,19 @@
     <h1 style="font-size:1.8rem">Staff Sign In</h1>
     <div id="reasonBox"></div>
     <div class="guest-tabs" role="tablist" aria-label="Sign-in method" style="margin-bottom:18px">
-      <a href="#" role="tab" id="tabTeam" class="active" aria-selected="true">Team password</a>
-      <a href="#" role="tab" id="tabMgr" aria-selected="false">Manager account</a>
+      <a href="#" role="tab" id="tabMgr" class="active" aria-selected="true">Personal account</a>
+      <a href="#" role="tab" id="tabTeam" aria-selected="false">Shared team password</a>
     </div>
-    <form id="mgrForm" class="hidden" novalidate>
-      <p class="muted">Managers sign in with the personal account the business owner created for them.</p>
+    <form id="mgrForm" novalidate>
+      <p class="muted">Managers and staff sign in here, with the email (or username) and password created for them by the business owner or their manager.</p>
       <div class="field"><label for="mIdent">Email or username<span class="req" aria-hidden="true">*</span></label><input id="mIdent" name="identifier" autocomplete="username" required></div>
       <div class="field"><label for="mPass">Password<span class="req" aria-hidden="true">*</span></label><input id="mPass" type="password" name="password" autocomplete="current-password" required></div>
       <div class="form-error hidden" id="mgrError" role="alert"></div>
       <button class="btn btn-primary btn-block" type="submit">Sign in</button>
       <p class="form-note" style="margin-top:14px"><a href="/portal/reset-password.html" style="color:var(--forest);font-weight:600">Forgot password?</a> · <a href="/owner/login.html" style="color:var(--forest);font-weight:600">Business owner sign in</a></p>
     </form>
-    <p class="muted" id="teamLead">Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
-    <form id="loginForm">
+    <p class="muted hidden" id="teamLead">Only for the old shared team passwords, if your business still uses them. Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
+    <form id="loginForm" class="hidden">
       <div class="field"><label>Team / Role</label>
         <select name="role" required>
           <option value="">Choose your team…</option>
@@ -79,6 +79,7 @@
     Object.entries(tabs).forEach(([key, [t, f]]) => { document.getElementById(t).classList.toggle("active", key === k); document.getElementById(t).setAttribute("aria-selected", key === k); document.getElementById(f).classList.toggle("hidden", key !== k); });
     document.getElementById("teamLead").classList.toggle("hidden", k !== "team");
   }
+  if (new URLSearchParams(location.search).get("tab") === "team") show("team");
   document.getElementById("tabTeam").addEventListener("click", (e) => { e.preventDefault(); show("team"); });
   document.getElementById("tabMgr").addEventListener("click", (e) => { e.preventDefault(); show("mgr"); });
   document.getElementById("mgrForm").addEventListener("submit", async (e) => {
@@ -111,7 +112,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const res = await Auth.login(fd.get("role"), fd.get("password"), fd.get("name"));
     window.location.href = Utils.qs("next") || ROLE_DEST[res.role] || "/admin/dashboard.html";
   } catch (err) {
-    errorBox.textContent = err.message || "Incorrect password for that team.";
+    errorBox.textContent = (err.message || "Incorrect password for that team.") + " Do you have a personal account? Use the “Personal account” tab above.";
     errorBox.classList.remove("hidden");
   }
 });

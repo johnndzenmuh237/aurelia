@@ -314,6 +314,7 @@ async function confirmReset(email, code, newPassword) {
 async function listManagers() {
   const snap = await db.collection(ACCOUNTS).where("role", "==", "manager").get();
   return snap.docs.map((d) => publicAccount({ id: d.id, ...d.data() }))
+    .filter((a) => a.tier !== "staff") // team members have their own list
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
@@ -327,6 +328,7 @@ async function updateManager(id, patch, actorKey) {
   }
   if (patch.phone !== undefined && !PROFILE_KEYS.some((k) => k !== "phone" && patch[k] !== undefined)) update.phone = cleanPhone(patch.phone, "Phone number");
   if (patch.departments !== undefined) update.departments = cleanDepartments(patch.departments);
+  if (patch.canManageTeam !== undefined && acct.tier !== "staff") update.canManageTeam = patch.canManageTeam === true || patch.canManageTeam === "true";
   if (patch.permissions !== undefined) update.permissions = cleanPermissions(patch.permissions);
 
   const newEmail = patch.email !== undefined ? String(patch.email).trim().toLowerCase() : null;

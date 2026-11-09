@@ -226,3 +226,25 @@ img,svg,video{max-width:100%}
 .admin-content .section-head>div{text-align:left}
 .stat-card .stat-label{padding-right:34px}
 [hidden]{display:none !important}
+
+/* Permanent install button in every dashboard header */
+.install-pill{display:inline-flex; align-items:center; gap:7px; height:42px; padding:0 14px; border-radius:999px; border:1px solid var(--gold); background:var(--gold); color:#fff; font:600 .82rem/1 inherit; font-family:inherit; cursor:pointer; margin-right:6px; white-space:nowrap}
+.install-pill:hover{filter:brightness(.95)}
+.install-pill[hidden]{display:none !important}
+@media (max-width:520px){ .install-pill{padding:0; width:42px; justify-content:center} .install-pill span{display:none} }
+
+/* Responsive profile card */
+.pf-head{display:flex; gap:16px; align-items:center; margin-bottom:18px}
+.pf-head h3{margin:0 0 2px; font-size:1.25rem}
+.pf-head p{margin:0 0 8px}
+.pf-avatar{width:64px; height:64px; flex:0 0 auto; border-radius:50%; background:var(--forest-2); color:#F4DDAE; display:inline-flex; align-items:center; justify-content:center; font:700 1.3rem/1 var(--font-display, inherit)}
+.pf-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px}
+.pf-sect{border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; background:var(--paper); min-width:0}
+.pf-sect h4{display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--gold-2)}
+.pf-sect dl{margin:0}
+.pf-row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px dashed var(--line); font-size:.88rem}
+.pf-row:first-child{border-top:0}
+.pf-row dt{color:var(--muted, #6b7a73); flex:0 0 auto}
+.pf-row dd{margin:0; text-align:right; overflow-wrap:anywhere; font-weight:500}
+@media (max-width:520px){ .pf-head{flex-direction:column; align-items:flex-start} .pf-row{flex-direction:column; gap:2px} .pf-row dd{text-align:left} }
+.dlg:has(.pf){max-width:880px}

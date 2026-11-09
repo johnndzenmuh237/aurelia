@@ -19,6 +19,7 @@
       return { group: "Owner", items: [
         { href: "/owner/dashboard.html", label: "Owner Dashboard", icon: "layout-dashboard" },
         { href: "/owner/managers.html", label: "Managers", icon: "user-cog" },
+        { href: "/manager/team.html", label: "Team Accounts", icon: "users" },
         { href: "/owner/records.html", label: "Business Records", icon: "database" },
         { href: "/portal/messages.html", label: "Messages", icon: "messages-square" },
         { href: "/portal/notifications.html", label: "Notifications", icon: "bell" },
@@ -26,8 +27,9 @@
       ] };
     }
     if (session.accountId && session.role === "manager") {
-      return { group: "Manager", items: [
-        { href: "/manager/dashboard.html", label: "Manager Dashboard", icon: "layout-dashboard" },
+      return { group: session.tier === "staff" ? "My Workspace" : "Manager", items: [
+        { href: "/manager/dashboard.html", label: session.tier === "staff" ? "My Dashboard" : "Manager Dashboard", icon: "layout-dashboard" },
+        ...(session.canManageTeam ? [{ href: "/manager/team.html", label: "My Team", icon: "users" }] : []),
         { href: "/portal/messages.html", label: "Messages", icon: "messages-square" },
         { href: "/portal/notifications.html", label: "Notifications", icon: "bell" },
         { href: "/portal/account.html", label: "My Account & Security", icon: "shield-check" },

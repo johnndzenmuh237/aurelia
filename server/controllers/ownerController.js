@@ -18,6 +18,8 @@ function session(acct) {
     token: issueToken(acct), role: acct.role, name: acct.fullName, email: acct.email, accountId: acct.id,
     departments: acct.departments || [], permissions: acct.permissions || [],
     mustChangePassword: Boolean(acct.mustChangePassword),
+    tier: acct.tier || acct.role, staffRole: acct.staffRole || null,
+    canManageTeam: acct.role === "manager" && acct.tier !== "staff" && acct.canManageTeam !== false,
     idleTimeoutMinutes: acct.role === "owner" ? 30 : 60,
   };
 }
@@ -128,7 +130,7 @@ async function createManager(req, res, next) {
       role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: b.departments, permissions: b.permissions || ["view", "create", "edit"],
       createdBy: req.user.key, mustChangePassword: b.mustChangePassword !== false, // first sign-in forces a personal password
-      extra: b.replaces ? { replaces: b.replaces } : {},
+      extra: { tier: "manager", canManageTeam: b.canManageTeam !== false && b.canManageTeam !== "false", ...(b.replaces ? { replaces: b.replaces } : {}) },
     });
     await audit(req, "Manager account created", acct.id, { departments: acct.departments, permissions: acct.permissions });
     res.status(201).json({ item: accounts.publicAccount(acct) });

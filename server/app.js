@@ -3,7 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const { authenticate } = require("./middleware/auth");
-const { requireRole, requireOwner, requireAccount } = require("./middleware/roles");
+const { requireRole, requireOwner, requireAccount, requireTeamManager } = require("./middleware/roles");
 const { activityTracker } = require("./middleware/activity");
 const { rateLimit } = require("./middleware/rate-limit");
 const { errorHandler } = require("./middleware/error-handler");
@@ -18,6 +18,7 @@ const barController = require("./controllers/barController");
 const dataController = require("./controllers/dataController");
 const financeController = require("./controllers/financeController");
 const ownerController = require("./controllers/ownerController");
+const teamController = require("./controllers/teamController");
 const notificationController = require("./controllers/notificationController");
 const messageController = require("./controllers/messageController");
 
@@ -55,6 +56,14 @@ app.post("/api/account/change-password", staff, requireAccount, rateLimit({ wind
 // Owner-only: manager administration + business overview. Checked here on
 // the server — a manager token can never reach these, whatever the UI shows.
 app.get("/api/owner/overview", staff, requireOwner, ownerController.overview);
+// Team accounts (owner or an allowed manager creates the people who work for them)
+app.get("/api/team/options", staff, requireTeamManager, teamController.options);
+app.get("/api/team", staff, requireTeamManager, teamController.list);
+app.post("/api/team", staff, requireTeamManager, teamController.create);
+app.get("/api/team/:id", staff, requireTeamManager, teamController.get);
+app.put("/api/team/:id", staff, requireTeamManager, teamController.update);
+app.post("/api/team/:id/status", staff, requireTeamManager, teamController.setStatus);
+app.post("/api/team/:id/reset-password", staff, requireTeamManager, teamController.resetPassword);
 app.get("/api/owner/managers", staff, requireOwner, ownerController.listManagers);
 app.post("/api/owner/managers", staff, requireOwner, ownerController.createManager);
 app.get("/api/owner/managers/:id", staff, requireOwner, ownerController.getManager);
