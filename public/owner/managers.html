@@ -55,7 +55,7 @@ document.addEventListener("shell-ready", function () {
     if (!managers.length) { $("tbl").innerHTML = PortalUI.empty("user-cog", "No managers yet", "Create the first manager account to delegate a department."); return; }
     if (!rows.length) { $("tbl").innerHTML = PortalUI.empty("search", "No matches", "Try a different search or filter."); return; }
     $("tbl").innerHTML = `<table class="data-table stack"><thead><tr><th>Manager</th><th>Departments</th><th>Permissions</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>` + rows.map(m => `
-      <tr><td data-label="Manager"><b>${esc(m.fullName)}</b><div class="muted" style="font-size:.78rem">${esc(m.email)}</div></td>
+      <tr><td data-label="Manager"><b>${esc(m.fullName)}</b><div class="muted" style="font-size:.78rem">${esc(m.email)}</div><div class="muted" style="font-size:.78rem">${esc([(m.profile || {}).position, m.phone].filter(Boolean).join(" · ")) || "Details incomplete"}</div></td>
       <td data-label="Departments"><div class="tags">${m.departments.map(d => `<span class="badge">${esc(DEPTS[d])}</span>`).join("")}</div></td>
       <td data-label="Permissions" class="muted" style="font-size:.8rem">${m.permissions.join(", ")}</td>
       <td data-label="Status">${m.status === "active" ? '<span class="badge">Active</span>' : '<span class="badge off">Deactivated</span>'}${m.mustChangePassword ? ' <span class="badge warn">Password change pending</span>' : ""}${m.locked ? ' <span class="badge bad">Locked</span>' : ""}</td>
@@ -76,18 +76,62 @@ document.addEventListener("shell-ready", function () {
   const picked = (form, n) => [...form.querySelectorAll(`input[name=${n}]:checked`)].map(i => i.value);
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+  const ID_TYPES = ["National ID card", "Passport", "Driver's licence", "Residence permit"];
+  const GENDERS = ["Female", "Male", "Other", "Prefer not to say"];
+  const EMP_TYPES = ["Full-time", "Part-time", "Contract"];
+  const COUNTRIES = ["Cameroon", "Nigeria", "Ghana", "Gabon", "Chad", "Central African Republic", "Congo", "DR Congo", "Equatorial Guinea", "Senegal", "Côte d'Ivoire", "Benin", "Togo", "Niger", "Mali", "Burkina Faso", "Kenya", "Uganda", "Tanzania", "Rwanda", "Ethiopia", "South Africa", "Morocco", "Egypt", "France", "United Kingdom", "United States", "Canada", "Germany", "Belgium", "Italy", "Spain", "China", "India", "United Arab Emirates"];
+  const PROFILE_KEYS = ["dateOfBirth", "gender", "nationality", "phone", "addressLine", "city", "region", "country", "idType", "idNumber", "position", "employmentType", "startDate", "emergencyName", "emergencyRelation", "emergencyPhone"];
+  const opts = (list, sel, blank) => (blank ? `<option value="">${blank}</option>` : "") + list.map(o => `<option ${o === sel ? "selected" : ""}>${esc(o)}</option>`).join("");
+  const maxDob = () => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().slice(0, 10); };
+  const pick = (d) => Object.fromEntries(PROFILE_KEYS.map(k => [k, (d[k] || "").trim()]));
+
   function personFields(m = {}, withPw = true) {
-    return `<div class="field"><label>Full name<span class="req">*</span></label><input name="fullName" value="${esc(m.fullName || "")}" required></div>
-      <div class="field-row"><div class="field"><label>Email<span class="req">*</span></label><input name="email" type="email" value="${esc(m.email || "")}" required><span class="hint">Used to sign in and for password reset codes.</span></div>
-      <div class="field"><label>Phone</label><input name="phone" type="tel" value="${esc(m.phone || "")}"></div></div>
-      ${withPw ? `<div class="field"><label>Username <span class="muted">(optional)</span></label><input name="username" autocomplete="off" placeholder="defaults to the email"></div>
-      ${PortalUI.passwordField({ name: "password", label: "Initial password", meter: true, hint: "The manager must choose their own password at first sign-in." })}` : ""}`;
+    const p = Object.assign({}, m.profile || {}, { phone: m.phone || "" });
+    const f = (name, label, o = {}) => `<div class="field"><label>${label}${o.req ? '<span class="req">*</span>' : ""}</label>${o.html || `<input name="${name}" type="${o.type || "text"}" value="${esc(o.value !== undefined ? o.value : (p[name] || ""))}" ${o.req ? "required" : ""} ${o.attrs || ""}>`}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</div>`;
+    const legacy = m.id && !m.profile ? `<div class="alert alert-info">${ic("info")}<span>This account was created before registration details were collected. Complete the required fields below to save changes.</span></div>` : "";
+    return legacy +
+      `<div class="form-section">Personal details</div>` +
+      f("fullName", "Full name", { req: true, value: m.fullName || "", attrs: 'autocomplete="off" placeholder="As shown on the ID document"' }) +
+      `<div class="field-row">` + f("dateOfBirth", "Date of birth", { req: true, type: "date", attrs: `max="${maxDob()}"`, hint: "Must be 18 or older." }) +
+      f("gender", "Gender", { html: `<select name="gender">${opts(GENDERS, p.gender, "Select…")}</select>` }) + `</div>` +
+      f("nationality", "Nationality", { attrs: 'placeholder="e.g. Cameroonian"' }) +
+      `<div class="form-section">Contact and location</div>` +
+      `<div class="field-row">` + f("email", "Email address", { req: true, type: "email", value: m.email || "", hint: "Used to sign in and for password reset codes.", attrs: 'autocomplete="off"' }) +
+      f("phone", "Phone number", { req: true, type: "tel", attrs: 'placeholder="+237 6XX XXX XXX" inputmode="tel"' }) + `</div>` +
+      f("addressLine", "Home address", { req: true, attrs: 'placeholder="Street, quarter / neighbourhood"' }) +
+      `<div class="field-row">` + f("city", "City / town", { req: true }) + f("region", "Region / state") + `</div>` +
+      f("country", "Country", { req: true, attrs: 'list="countryList"' }) + `<datalist id="countryList">${COUNTRIES.map(c => `<option value="${esc(c)}">`).join("")}</datalist>` +
+      `<div class="form-section">Identification</div>` +
+      `<div class="field-row">` + f("idType", "ID document", { req: true, html: `<select name="idType" required>${opts(ID_TYPES, p.idType, "Select…")}</select>` }) +
+      f("idNumber", "ID document number", { req: true, attrs: 'autocomplete="off"', hint: "One person, one ID: duplicates are refused." }) + `</div>` +
+      `<div class="form-section">Employment</div>` +
+      f("position", "Job title", { req: true, attrs: 'placeholder="e.g. Front office manager"' }) +
+      `<div class="field-row">` + f("employmentType", "Employment type", { html: `<select name="employmentType">${opts(EMP_TYPES, p.employmentType || "Full-time")}</select>` }) +
+      f("startDate", "Start date", { type: "date" }) + `</div>` +
+      `<div class="form-section">Emergency contact <span class="muted" style="text-transform:none;letter-spacing:0">(optional)</span></div>` +
+      f("emergencyName", "Contact name") +
+      `<div class="field-row">` + f("emergencyRelation", "Relationship", { attrs: 'placeholder="e.g. Spouse, Brother"' }) + f("emergencyPhone", "Contact phone", { type: "tel", attrs: 'inputmode="tel"' }) + `</div>` +
+      (withPw ? `<div class="form-section">Sign-in</div><div class="field"><label>Username <span class="muted">(optional)</span></label><input name="username" autocomplete="off" placeholder="defaults to the email"></div>
+      ${PortalUI.passwordField({ name: "password", label: "Initial password", meter: true, hint: "The manager must choose their own password at first sign-in." })}` : "");
   }
 
   function validatePerson(d, needPw) {
-    if (d.fullName.trim().length < 2) throw new Error("Enter the manager's full name.");
-    if (!EMAIL.test(d.email.trim())) throw new Error("Enter a valid email address.");
-    if (needPw && d.password.length < 10) throw new Error("The initial password must be at least 10 characters.");
+    const bad = (m) => { throw new Error(m); };
+    if (d.fullName.trim().length < 2) bad("Enter the manager's full name.");
+    if (!d.dateOfBirth) bad("Enter the date of birth.");
+    const dob = new Date(d.dateOfBirth); if (isNaN(dob) || dob > new Date(maxDob() + "T23:59:59")) bad("The manager must be at least 18 years old.");
+    if (!EMAIL.test(d.email.trim())) bad("Enter a valid email address.");
+    const digits = (d.phone || "").replace(/\D/g, ""); if (digits.length < 7 || digits.length > 15 || !/^[+\d][\d\s().-]*$/.test(d.phone.trim())) bad("Enter a valid phone number (7–15 digits).");
+    if (!d.addressLine.trim()) bad("Enter the home address.");
+    if (!d.city.trim()) bad("Enter the city or town.");
+    if (!d.country.trim()) bad("Enter the country.");
+    if (!d.idType) bad("Choose the ID document type.");
+    if (!/^[A-Za-z0-9][A-Za-z0-9 /.-]{3,29}$/.test(d.idNumber.trim())) bad("Enter the ID document number (4–30 letters or digits).");
+    if (!d.position.trim()) bad("Enter the job title.");
+    const ep = (d.emergencyPhone || "").trim(), en = (d.emergencyName || "").trim();
+    if ((ep || en) && !(ep && en)) bad("Give both the emergency contact's name and phone, or leave both empty.");
+    if (ep) { const x = ep.replace(/\D/g, ""); if (x.length < 7 || x.length > 15) bad("The emergency contact phone is not a valid number."); }
+    if (needPw && d.password.length < 10) bad("The initial password must be at least 10 characters.");
   }
 
   function createDialog() {
@@ -111,7 +155,7 @@ document.addEventListener("shell-ready", function () {
         onSubmit: async (form, close) => {
           const d = PortalUI.formData(form); validatePerson(d, false);
           const departments = picked(form, "dept"); if (!departments.length) throw new Error("Assign at least one department.");
-          await Utils.api("/owner/managers/" + m.id, { method: "PUT", body: { fullName: d.fullName, email: d.email, phone: d.phone, departments, permissions: ["view", ...picked(form, "perm")] } });
+          await Utils.api("/owner/managers/" + m.id, { method: "PUT", body: { fullName: d.fullName, email: d.email, ...pick(d), departments, permissions: ["view", ...picked(form, "perm")] } });
           close(); Utils.toast("Manager updated.", "success"); load();
         } });
     } else if (a === "msg") {

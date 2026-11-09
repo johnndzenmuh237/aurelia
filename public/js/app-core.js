@@ -160,15 +160,37 @@
     navigator.serviceWorker.register("/sw.js").catch(function () { /* PWA features simply stay off */ });
   }
 
+  /* Which device are we on? Decides what the card can honestly offer. */
+  function platform() {
+    const ua = navigator.userAgent || "";
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const android = /Android/i.test(ua);
+    // Links opened from WhatsApp, Telegram, Facebook etc. run in an embedded
+    // browser that can never install an app.
+    const inApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|; wv\)|Snapchat|TikTok/i.test(ua);
+    const mobile = ios || android || /Mobi/i.test(ua);
+    return { ios: ios, android: android, inApp: inApp, mobile: mobile };
+  }
+
+  function guideText() {
+    const p = platform();
+    if (p.ios) return "Tap the Share button, then “Add to Home Screen”.";
+    if (p.inApp) return "Open this page in Chrome first (menu ⋮ → “Open in browser”), then choose “Install app”.";
+    if (p.android) return "Tap the menu ⋮ in your browser, then “Install app” or “Add to Home screen”.";
+    return "Use your browser’s menu and choose “Install app” or “Add to Home screen”.";
+  }
+
   function showInstallCard(mode) {
-    if (document.getElementById("installCard") || !readSession()) return;
-    const ios = mode === "ios";
+    const old = document.getElementById("installCard");
+    if (old) { if (mode !== "native" || old.dataset.mode === "native") return; old.remove(); }
+    const native = mode === "native";
     const card = document.createElement("div");
-    card.className = "install-card"; card.id = "installCard"; card.setAttribute("role", "dialog"); card.setAttribute("aria-label", "Install Aurelia");
+    card.className = "install-card"; card.id = "installCard"; card.dataset.mode = mode;
+    card.setAttribute("role", "dialog"); card.setAttribute("aria-label", "Install Aurelia");
     card.innerHTML =
       '<span class="ic">' + icon("smartphone", 22) + '</span>' +
-      '<div class="tx"><b>Install Aurelia PMS</b><span>' + (ios ? "Tap Share, then “Add to Home Screen”." : "Open it like an app — faster, full screen, works on your home screen.") + '</span></div>' +
-      (ios ? "" : '<button class="btn btn-gold btn-sm" id="installGo" type="button">Install</button>') +
+      '<div class="tx"><b>Install Aurelia PMS</b><span>' + (native ? "Open it like an app: faster, full screen, right on your home screen." : esc(guideText())) + '</span></div>' +
+      (native ? '<button class="btn btn-gold btn-sm" id="installGo" type="button">Install</button>' : "") +
       '<button class="x" id="installX" type="button" aria-label="Dismiss">' + icon("x", 16) + '</button>';
     document.body.appendChild(card);
     requestAnimationFrame(function () { card.classList.add("show"); });
@@ -179,7 +201,7 @@
   }
 
   async function runInstall() {
-    if (!deferredPrompt) return false;
+    if (!deferredPrompt) { if (!isStandalone()) showInstallCard("guide"); return false; }
     const p = deferredPrompt; deferredPrompt = null;
     p.prompt();
     const choice = await p.userChoice;
@@ -189,15 +211,16 @@
     return choice.outcome === "accepted";
   }
 
+  // "Install app" buttons show on every device that is not already running the app.
   function refreshInstallButtons() {
-    document.querySelectorAll("[data-install-btn]").forEach(function (b) { b.hidden = !(deferredPrompt && !isStandalone()); });
+    document.querySelectorAll("[data-install-btn]").forEach(function (b) { b.hidden = isStandalone(); });
   }
 
   window.addEventListener("beforeinstallprompt", function (e) {
     e.preventDefault();
     deferredPrompt = e;
     refreshInstallButtons();
-    if (readSession() && shouldOffer()) setTimeout(function () { if (deferredPrompt) showInstallCard("native"); }, 1800);
+    if (shouldOffer()) setTimeout(function () { if (deferredPrompt) showInstallCard("native"); }, 1200);
   });
   window.addEventListener("appinstalled", function () {
     deferredPrompt = null; setInstallState("installed");
@@ -211,10 +234,13 @@
   });
   window.AureliaInstall = { run: runInstall, available: function () { return Boolean(deferredPrompt) && !isStandalone(); }, standalone: isStandalone };
 
-  function iosHint() {
-    const ua = navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (ios && !isStandalone() && readSession() && shouldOffer()) setTimeout(function () { showInstallCard("ios"); }, 2500);
+  /* Phones and tablets never get the browser's install event in every case
+   * (iPhones never do), so after a short pause, if it has not arrived, show
+   * the card with the exact steps for this device. Runs on every page,
+   * signed in or not. Desktop browsers without the event are left alone. */
+  function installFallback() {
+    if (isStandalone() || !shouldOffer() || !platform().mobile) return;
+    setTimeout(function () { if (!deferredPrompt && !isStandalone()) showInstallCard("guide"); }, 3500);
   }
 
   /* ------------------------------------------------------------------ */
@@ -252,8 +278,9 @@
   function boot() {
     registerSW();
     if (window.Icons && window.Icons.hydrate) window.Icons.hydrate(document);
-    if (readSession()) { mountBell(); publicHeader(); idleWatch(); iosHint(); }
+    if (readSession()) { mountBell(); publicHeader(); idleWatch(); }
     refreshInstallButtons();
+    installFallback();
   }
   // Run after the page's own DOMContentLoaded handlers (the admin shell builds its topbar there).
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 0); });

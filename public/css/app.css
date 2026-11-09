@@ -192,7 +192,7 @@ button,.btn,a{-webkit-tap-highlight-color:transparent}
 }
 
 /* ---------- Install prompt ---------- */
-.install-card{position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(24px); width:min(440px, calc(100vw - 24px)); background:var(--forest-2); color:#fff; border-radius:var(--radius-l); box-shadow:var(--shadow-l); padding:14px 14px 14px 16px; display:flex; gap:12px; align-items:center; z-index:350; opacity:0; transition:.3s ease; border:1px solid rgba(255,255,255,.12)}
+.install-card{position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%) translateY(24px); width:min(440px, calc(100vw - 24px)); background:var(--forest-2); color:#fff; border-radius:var(--radius-l); box-shadow:var(--shadow-l); padding:14px 14px 14px 16px; display:flex; gap:12px; align-items:center; z-index:350; opacity:0; transition:.3s ease; border:1px solid rgba(255,255,255,.12)}
 .install-card.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .install-card .ic{width:44px; height:44px; border-radius:12px; background:var(--gold); display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto}
 .install-card .tx{flex:1; min-width:0}

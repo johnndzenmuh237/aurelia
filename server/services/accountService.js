@@ -59,7 +59,80 @@ function validateIdentity({ email, username, fullName }) {
   return { email: String(email).trim().toLowerCase(), username: u, fullName: String(fullName).trim() };
 }
 
-async function createAccount({ role, id, fullName, email, username, phone, password, departments, permissions, createdBy, mustChangePassword, extra = {} }) {
+
+/* ---------------- manager profile (identity + contact details) ---------------- */
+
+const ID_TYPES = ["National ID card", "Passport", "Driver's licence", "Residence permit"];
+const GENDERS = ["Female", "Male", "Other", "Prefer not to say"];
+const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract"];
+const PROFILE_KEYS = ["dateOfBirth", "gender", "nationality", "phone", "addressLine", "city", "region", "country",
+  "idType", "idNumber", "position", "employmentType", "startDate",
+  "emergencyName", "emergencyRelation", "emergencyPhone"];
+
+const clip = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+
+function cleanPhone(v, label) {
+  const s = clip(v, 30);
+  if (!s) return "";
+  const digits = s.replace(/\D/g, "");
+  if (!/^[+\d][\d\s().-]*$/.test(s) || digits.length < 7 || digits.length > 15) throw new ApiError(400, `${label} must be a valid number (7–15 digits).`);
+  return s;
+}
+function cleanDate(v, label) {
+  const s = clip(v, 10);
+  if (!s) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s))) throw new ApiError(400, `${label} must be a valid date.`);
+  return s;
+}
+
+/** Validates and whitelists the personal / contact / ID details of a manager.
+ *  Unknown keys are ignored, so nothing else can be written through this path. */
+function cleanProfile(input = {}) {
+  const b = input || {};
+  const need = (val, msg) => { if (!val) throw new ApiError(400, msg); return val; };
+
+  const phone = need(cleanPhone(b.phone, "Phone number"), "A phone number is required.");
+  const dateOfBirth = need(cleanDate(b.dateOfBirth, "Date of birth"), "Date of birth is required.");
+  const dob = new Date(dateOfBirth); const now = new Date();
+  let age = now.getUTCFullYear() - dob.getUTCFullYear();
+  if (now.getUTCMonth() < dob.getUTCMonth() || (now.getUTCMonth() === dob.getUTCMonth() && now.getUTCDate() < dob.getUTCDate())) age -= 1;
+  if (dob > now) throw new ApiError(400, "Date of birth cannot be in the future.");
+  if (age < 18) throw new ApiError(400, "A manager must be at least 18 years old.");
+  if (age > 90) throw new ApiError(400, "Check the date of birth — it looks incorrect.");
+
+  const gender = clip(b.gender, 30);
+  if (gender && !GENDERS.includes(gender)) throw new ApiError(400, "Choose a valid gender option.");
+
+  const idType = need(clip(b.idType, 40), "Choose the type of ID document.");
+  if (!ID_TYPES.includes(idType)) throw new ApiError(400, "Choose a valid ID document type.");
+  const idNumber = need(clip(b.idNumber, 30).toUpperCase(), "The ID document number is required.");
+  if (!/^[A-Z0-9][A-Z0-9 /.-]{3,29}$/.test(idNumber)) throw new ApiError(400, "The ID number must be 4–30 letters or digits.");
+
+  const employmentType = clip(b.employmentType, 30) || "Full-time";
+  if (!EMPLOYMENT_TYPES.includes(employmentType)) throw new ApiError(400, "Choose a valid employment type.");
+  const startDate = cleanDate(b.startDate, "Start date");
+
+  const emergencyName = clip(b.emergencyName, 120);
+  const emergencyPhone = cleanPhone(b.emergencyPhone, "Emergency contact phone");
+  const emergencyRelation = clip(b.emergencyRelation, 60);
+  if ((emergencyName || emergencyPhone) && !(emergencyName && emergencyPhone)) throw new ApiError(400, "Give both the emergency contact's name and phone number, or leave both empty.");
+
+  return {
+    dateOfBirth, gender, phone,
+    nationality: clip(b.nationality, 60),
+    addressLine: need(clip(b.addressLine, 200), "The home address is required."),
+    city: need(clip(b.city, 80), "The city or town is required."),
+    region: clip(b.region, 80),
+    country: need(clip(b.country, 80), "The country is required."),
+    idType, idNumber,
+    position: need(clip(b.position, 100), "The job title is required."),
+    employmentType, startDate,
+    emergencyName, emergencyRelation, emergencyPhone,
+  };
+}
+const idNumberKey = (p) => idxId("n", `${p.idType}|${p.idNumber.replace(/[\s./-]/g, "")}`);
+
+async function createAccount({ role, id, fullName, email, username, phone, password, departments, permissions, createdBy, mustChangePassword, profile, extra = {} }) {
   const ident = validateIdentity({ email, username, fullName });
   const problem = passwordProblem(password);
   if (problem) throw new ApiError(400, problem);
@@ -68,13 +141,15 @@ async function createAccount({ role, id, fullName, email, username, phone, passw
   const ref = id ? db.collection(ACCOUNTS).doc(id) : db.collection(ACCOUNTS).doc();
   const emailRef = db.collection(INDEX).doc(idxId("e", ident.email));
   const userRef = ident.username ? db.collection(INDEX).doc(idxId("u", ident.username)) : null;
+  const idRef = profile ? db.collection(INDEX).doc(idNumberKey(profile)) : null;
 
   const doc = {
     role,
     fullName: ident.fullName,
     email: ident.email,
     username: ident.username || ident.email,
-    phone: phone ? String(phone).trim() : "",
+    phone: profile ? profile.phone : (phone ? String(phone).trim() : ""),
+    ...(profile ? { profile } : {}),
     passwordHash,
     status: "active",
     tokenVersion: 1,
@@ -90,17 +165,20 @@ async function createAccount({ role, id, fullName, email, username, phone, passw
   };
 
   await db.runTransaction(async (tx) => {
-    const [existing, emailSnap, userSnap] = await Promise.all([
+    const [existing, emailSnap, userSnap, idSnap] = await Promise.all([
       tx.get(ref),
       tx.get(emailRef),
       userRef ? tx.get(userRef) : Promise.resolve(null),
+      idRef ? tx.get(idRef) : Promise.resolve(null),
     ]);
     if (existing.exists) throw new ApiError(409, "That account already exists.");
     if (emailSnap.exists) throw new ApiError(409, "An account with that email already exists.");
     if (userSnap && userSnap.exists) throw new ApiError(409, "That username is already taken.");
+    if (idSnap && idSnap.exists) throw new ApiError(409, "A manager with that ID document number is already registered.");
     tx.set(ref, doc);
     tx.set(emailRef, { accountId: ref.id });
     if (userRef) tx.set(userRef, { accountId: ref.id });
+    if (idRef) tx.set(idRef, { accountId: ref.id });
   });
   return { id: ref.id, ...doc };
 }
@@ -247,7 +325,7 @@ async function updateManager(id, patch, actorKey) {
     if (String(patch.fullName).trim().length < 2) throw new ApiError(400, "Full name is required.");
     update.fullName = String(patch.fullName).trim();
   }
-  if (patch.phone !== undefined) update.phone = String(patch.phone).trim();
+  if (patch.phone !== undefined && !PROFILE_KEYS.some((k) => k !== "phone" && patch[k] !== undefined)) update.phone = cleanPhone(patch.phone, "Phone number");
   if (patch.departments !== undefined) update.departments = cleanDepartments(patch.departments);
   if (patch.permissions !== undefined) update.permissions = cleanPermissions(patch.permissions);
 
@@ -263,6 +341,25 @@ async function updateManager(id, patch, actorKey) {
       tx.delete(oRef);
     });
     update.email = newEmail;
+  }
+  // Personal / contact / ID details: validated as a whole so a half-filled
+  // record can never be saved. Accounts created before these fields existed
+  // are completed the first time the owner edits them with the new form.
+  if (PROFILE_KEYS.some((k) => patch[k] !== undefined)) {
+    const next = cleanProfile({ ...(acct.profile || {}), phone: acct.phone, ...patch });
+    update.profile = next;
+    update.phone = next.phone;
+    const newKey = idNumberKey(next);
+    const oldKey = acct.profile && acct.profile.idNumber ? idNumberKey(acct.profile) : null;
+    if (newKey !== oldKey) {
+      await db.runTransaction(async (tx) => {
+        const nRef = db.collection(INDEX).doc(newKey);
+        const n = await tx.get(nRef);
+        if (n.exists && (n.data() || {}).accountId !== id) throw new ApiError(409, "A manager with that ID document number is already registered.");
+        tx.set(nRef, { accountId: id });
+        if (oldKey) tx.delete(db.collection(INDEX).doc(oldKey));
+      });
+    }
   }
   // Changing what a manager may do takes effect on their very next request
   // (the API re-reads the account each time), but bump the version if the
@@ -282,6 +379,7 @@ async function setStatus(id, active, actorKey) {
 }
 
 module.exports = {
+  cleanProfile, ID_TYPES, GENDERS, EMPLOYMENT_TYPES,
   ACCOUNTS, publicAccount, createAccount, getAccount, findByIdentifier, login,
   changePassword, adminSetPassword, requestReset, confirmReset,
   listManagers, updateManager, setStatus, cleanDepartments, cleanPermissions, EMAIL_RE,

@@ -2,7 +2,7 @@
  * - Never touches /api/* or cross-origin requests (live business data is never cached).
  * - Pages: network first, falling back to the last copy, then /offline.html.
  * - Static assets: stale-while-revalidate. */
-const VERSION = "aurelia-v1";
+const VERSION = "aurelia-v2";
 const PRECACHE = ["/offline.html", "/css/style.css", "/css/admin.css", "/css/app.css", "/js/icons.js", "/js/app-core.js", "/js/auth.js", "/js/utils.js", "/js/config.js", "/icons/icon-192.png", "/favicon.svg"];
 
 self.addEventListener("install", (e) => {

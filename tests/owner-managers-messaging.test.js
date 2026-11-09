@@ -22,6 +22,16 @@ const bearer = (t) => ({ Authorization: `Bearer ${t}` });
 const settle = () => new Promise((r) => setTimeout(r, 60)); // activity tracker runs after the response
 const legacyLogin = async (role, password, name = "Tester") => (await request(app).post("/api/auth/login").send({ role, password, name })).body.token;
 
+
+/** A complete, valid set of manager details; `n` makes the ID number unique. */
+const P = (n, over = {}) => ({
+  phone: "+237 670 000 00" + n, dateOfBirth: "1988-04-12", gender: "Female", nationality: "Cameroonian",
+  addressLine: "12 Independence Avenue", city: "Douala", region: "Littoral", country: "Cameroon",
+  idType: "National ID card", idNumber: "1002345" + n, position: "Department manager", employmentType: "Full-time",
+  startDate: "2026-01-05", emergencyName: "Paul Contact", emergencyRelation: "Brother", emergencyPhone: "+237 671 111 111",
+  ...over,
+});
+
 describe("owner setup & authentication", () => {
   test("setup is required on a fresh system", async () => {
     const r = await request(app).get("/api/owner/status");
@@ -102,12 +112,43 @@ describe("manager accounts: create, scope, revoke, replace", () => {
   test("owner creates a restaurant manager", async () => {
     const bad = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Mary Mgr", email: "mary@x.com", password: "Temp-Pass-2026a", departments: ["spaceship"] });
     expect(bad.status).toBe(400);
-    const r = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Mary Mgr", email: "mary@x.com", password: "Temp-Pass-2026a", departments: ["restaurant"], permissions: ["view", "create", "edit"] });
+    const r = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ ...P(1), fullName: "Mary Mgr", email: "mary@x.com", password: "Temp-Pass-2026a", departments: ["restaurant"], permissions: ["view", "create", "edit"] });
     expect(r.status).toBe(201);
     expect(r.body.item.passwordHash).toBeUndefined();
     mgr = r.body.item;
-    const dup = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Dup", email: "MARY@x.com", password: "Temp-Pass-2026a", departments: ["hr"] });
+    const dup = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ ...P(2), fullName: "Dup", email: "MARY@x.com", password: "Temp-Pass-2026a", departments: ["hr"] });
     expect(dup.status).toBe(409);
+  });
+  test("the registration form's details are stored with the account", async () => {
+    const g = await request(app).get(`/api/owner/managers/${mgr.id}`).set(bearer(ownerToken));
+    expect(g.body.item.profile).toMatchObject({ idType: "National ID card", idNumber: "10023451", city: "Douala", country: "Cameroon", position: "Department manager" });
+    expect(g.body.item.phone).toBe("+237 670 000 001");
+  });
+  test("incomplete or invalid details are rejected", async () => {
+    const base = { fullName: "Test Person", password: "Temp-Pass-2026a", departments: ["hr"] };
+    const post = (n, over, email) => request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ ...base, email: email || `t${n}@x.com`, ...P(50 + n, over) });
+    expect((await post(1, { phone: "" })).status).toBe(400);
+    expect((await post(2, { phone: "abc123" })).status).toBe(400);
+    expect((await post(3, { idNumber: "" })).status).toBe(400);
+    expect((await post(4, { idType: "Library card" })).status).toBe(400);
+    expect((await post(5, { dateOfBirth: "2015-01-01" })).status).toBe(400);   // under 18
+    expect((await post(6, { dateOfBirth: "not-a-date" })).status).toBe(400);
+    expect((await post(7, { addressLine: "" })).status).toBe(400);
+    expect((await post(8, { country: "" })).status).toBe(400);
+    expect((await post(9, { position: "" })).status).toBe(400);
+    expect((await post(10, { emergencyPhone: "" })).status).toBe(400);        // name without phone
+    expect((await post(11, {}, "not-an-email")).status).toBe(400);
+  });
+  test("the same ID document cannot register two managers", async () => {
+    const r = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Copy Cat", email: "copy@x.com", password: "Temp-Pass-2026a", departments: ["hr"], ...P(1, { idNumber: "1002-3451" }) });
+    expect(r.status).toBe(409);
+  });
+  test("editing details revalidates them and keeps the ID unique", async () => {
+    const ok = await request(app).put(`/api/owner/managers/${mgr.id}`).set(bearer(ownerToken)).send({ ...P(1), city: "Yaoundé" });
+    expect(ok.status).toBe(200);
+    expect(ok.body.item.profile.city).toBe("Yaoundé");
+    const bad = await request(app).put(`/api/owner/managers/${mgr.id}`).set(bearer(ownerToken)).send({ ...P(1), phone: "12" });
+    expect(bad.status).toBe(400);
   });
   test("first sign-in forces a personal password", async () => {
     const login = await request(app).post("/api/auth/manager-login").send({ identifier: "mary@x.com", password: "Temp-Pass-2026a" });
@@ -134,7 +175,7 @@ describe("manager accounts: create, scope, revoke, replace", () => {
     expect((await request(app).delete("/api/reservations/delete").set(bearer(mgr.token))).status).toBe(403);
   });
   test("method permissions: a view-only manager cannot create", async () => {
-    const r = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Vic Viewer", email: "vic@x.com", password: "Temp-Pass-2026a", departments: ["restaurant"], permissions: ["view"], mustChangePassword: false });
+    const r = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ ...P(3), fullName: "Vic Viewer", email: "vic@x.com", password: "Temp-Pass-2026a", departments: ["restaurant"], permissions: ["view"], mustChangePassword: false });
     const t = (await request(app).post("/api/auth/manager-login").send({ identifier: "vic@x.com", password: "Temp-Pass-2026a" })).body;
     expect(t.mustChangePassword).toBe(false);
     expect((await request(app).get("/api/staff/data/orders").set(bearer(t.token))).status).toBe(200);
@@ -200,7 +241,7 @@ describe("notifications", () => {
     const r = await request(app).post("/api/employees/applications").send({ fullName: "Job Seeker", phone: "670000000", email: "j@x.com", position: "Waiter" });
     expect(r.status).toBeLessThan(300);
     await settle();
-    const hr = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ fullName: "Hana HR", email: "hana@x.com", password: "Temp-Pass-2026a", departments: ["hr"], mustChangePassword: false });
+    const hr = await request(app).post("/api/owner/managers").set(bearer(ownerToken)).send({ ...P(4), fullName: "Hana HR", email: "hana@x.com", password: "Temp-Pass-2026a", departments: ["hr"], mustChangePassword: false });
     expect(hr.status).toBe(201);
     mgr2 = (await request(app).post("/api/auth/manager-login").send({ identifier: "hana@x.com", password: "Temp-Pass-2026a" })).body;
     mgr2.id = hr.body.item.id;
@@ -299,7 +340,7 @@ describe("revocation, history and replacement", () => {
   });
   test("owner replaces a manager; the successor inherits the department and the history", async () => {
     await request(app).post(`/api/owner/managers/${mgr.id}/status`).set(bearer(ownerToken)).send({ active: true });
-    const rep = await request(app).post(`/api/owner/managers/${mgr.id}/replace`).set(bearer(ownerToken)).send({ fullName: "Nick New", email: "nick@x.com", password: "Temp-Pass-2026a" });
+    const rep = await request(app).post(`/api/owner/managers/${mgr.id}/replace`).set(bearer(ownerToken)).send({ ...P(5), fullName: "Nick New", email: "nick@x.com", password: "Temp-Pass-2026a" });
     expect(rep.status).toBe(201);
     expect(rep.body.previous.status).toBe("deactivated");
     expect(rep.body.previous.replacedBy).toBe(rep.body.item.id);

@@ -123,8 +123,9 @@ async function createManager(req, res, next) {
     const b = req.body || {};
     requireFields(b, ["fullName", "email", "password"]);
     if (!Array.isArray(b.departments) || !b.departments.length) throw new ApiError(400, "Assign the manager to at least one department.");
+    const profile = accounts.cleanProfile(b);
     const acct = await accounts.createAccount({
-      role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: b.phone, password: b.password,
+      role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: b.departments, permissions: b.permissions || ["view", "create", "edit"],
       createdBy: req.user.key, mustChangePassword: b.mustChangePassword !== false, // first sign-in forces a personal password
       extra: b.replaces ? { replaces: b.replaces } : {},
@@ -172,8 +173,9 @@ async function replaceManager(req, res, next) {
     if (!old || old.role !== "manager") throw new ApiError(404, "Manager not found.");
     const b = req.body || {};
     requireFields(b, ["fullName", "email", "password"]);
+    const profile = accounts.cleanProfile(b);
     const fresh = await accounts.createAccount({
-      role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: b.phone, password: b.password,
+      role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: b.departments || old.departments, permissions: b.permissions || old.permissions,
       createdBy: req.user.key, mustChangePassword: true, extra: { replaces: old.id },
     });
