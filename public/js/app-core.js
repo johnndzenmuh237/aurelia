@@ -175,6 +175,16 @@
     navigator.serviceWorker.register("/sw.js").catch(function () { /* PWA features simply stay off */ });
   }
 
+  // A link opened from Telegram, WhatsApp etc. often arrives with an android-app://
+  // referrer from an app that is not a browser. Remember it for the whole visit.
+  (function () {
+    try {
+      const ref = document.referrer || "";
+      if (/^android-app:\/\//.test(ref) && !/com\.(android\.chrome|chrome\.|sec\.android\.app\.sbrowser|microsoft\.emmx|brave|opera|kiwi|vivaldi)/i.test(ref)) sessionStorage.setItem("aurelia_inapp", "1");
+    } catch (e) { /* ignore */ }
+  })();
+  function cameFromApp() { try { return sessionStorage.getItem("aurelia_inapp") === "1"; } catch (e) { return false; } }
+
   /* Which device are we on? Decides what the card can honestly offer. */
   function platform() {
     const ua = navigator.userAgent || "";
@@ -182,7 +192,7 @@
     const android = /Android/i.test(ua);
     // Links opened from WhatsApp, Telegram, Facebook etc. run in an embedded
     // browser that can never install an app.
-    const inApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|; wv\)|Snapchat|TikTok/i.test(ua);
+    const inApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|; wv\)|Snapchat|TikTok/i.test(ua) || cameFromApp();
     const mobile = ios || android || /Mobi/i.test(ua);
     return { ios: ios, android: android, inApp: inApp, mobile: mobile };
   }
@@ -190,8 +200,8 @@
   function guideText() {
     const p = platform();
     if (p.ios) return "Tap the Share button, then “Add to Home Screen”.";
-    if (p.inApp) return "Open this page in Chrome first (menu ⋮ → “Open in browser”), then choose “Install app”.";
-    if (p.android) return "Tap the menu ⋮ in your browser, then “Install app” or “Add to Home screen”.";
+    if (p.inApp) return "This is an app’s built-in browser, which cannot install apps. Tap the menu ⋮ → “Open in Chrome” (or “Open in…”), then tap “Install app”.";
+    if (p.android) return "Tap the menu ⋮, then “Install app” or “Add to Home screen”. Not there? You are probably inside Telegram or WhatsApp: tap ⋮ → “Open in Chrome” first.";
     return "Click the install icon at the right end of the address bar, or open the browser menu and choose “Install Aurelia PMS”.";
   }
 
@@ -205,12 +215,17 @@
     card.innerHTML =
       '<span class="ic">' + icon("smartphone", 22) + '</span>' +
       '<div class="tx"><b>Install Aurelia PMS</b><span>' + (native ? "Open it like an app: faster, full screen, right on your home screen." : esc(guideText())) + '</span></div>' +
-      (native ? '<button class="btn btn-gold btn-sm" id="installGo" type="button">Install</button>' : "") +
+      (native ? '<button class="btn btn-gold btn-sm" id="installGo" type="button">Install</button>' : (platform().mobile && !platform().ios ? '<button class="btn btn-gold btn-sm" id="installCopy" type="button">Copy link</button>' : "")) +
       '<button class="x" id="installX" type="button" aria-label="Dismiss">' + icon("x", 16) + '</button>';
     document.body.appendChild(card);
     requestAnimationFrame(function () { card.classList.add("show"); });
     const close = function () { card.classList.remove("show"); setTimeout(function () { card.remove(); }, 300); };
     card.querySelector("#installX").addEventListener("click", function () { setInstallState("dismissed"); close(); });
+    const cp = card.querySelector("#installCopy");
+    if (cp) cp.addEventListener("click", function () {
+      const done = function () { cp.textContent = "Copied"; setTimeout(function () { cp.textContent = "Copy link"; }, 2500); };
+      try { navigator.clipboard.writeText(location.origin + "/login.html").then(done, done); } catch (e) { done(); }
+    });
     const go = card.querySelector("#installGo");
     if (go) go.addEventListener("click", function () { close(); runInstall(); });
   }
