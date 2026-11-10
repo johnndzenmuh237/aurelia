@@ -20,10 +20,9 @@
 <div id="admin-shell" data-title="My Account & Security" data-roles="">
   <div id="admin-content">
 
-    <div id="force" class="alert alert-info hidden"><i data-icon="lock" data-size="18"></i><span><b>Choose your own password</b> before you continue. The temporary one you were given can no longer be used.</span></div>
     <div class="two-col">
       <div class="panel"><div class="panel-head"><h3>Profile</h3></div><div class="panel-body" id="profile"></div></div>
-      <div class="panel"><div class="panel-head"><h3>Change password</h3></div><div class="panel-body">
+      <div class="panel"><div class="panel-head"><h3 id="pwTitle">Change password</h3></div><div class="panel-body">
         <div id="pwNote" class="muted" style="font-size:.86rem;margin-bottom:12px">Changing your password signs you out of every other device.</div>
         <form id="pwForm" novalidate><div id="pwFields"></div><div class="alert alert-error hidden" id="pwErr" role="alert"></div><button class="btn btn-primary" type="submit">Update password</button></form></div></div>
     </div>
@@ -46,11 +45,14 @@ document.addEventListener("shell-ready", function () {
 
   const $ = (id) => document.getElementById(id), esc = PortalUI.esc;
   const s = Auth.getSession();
-  if (new URLSearchParams(location.search).get("force") || s.mustChangePassword) $("force").classList.remove("hidden");
   $("profile").innerHTML = `<dl style="display:grid;grid-template-columns:120px 1fr;gap:10px 14px;margin:0;font-size:.9rem"><dt class="muted">Name</dt><dd style="margin:0">${esc(s.name)}</dd><dt class="muted">Role</dt><dd style="margin:0">${esc(Auth.roleLabel())}</dd>
     ${s.email ? `<dt class="muted">Email</dt><dd style="margin:0">${esc(s.email)}</dd>` : ""}${(s.departments || []).length ? `<dt class="muted">Departments</dt><dd style="margin:0">${s.departments.map(d => esc(Auth.DEPARTMENTS[d])).join(", ")}</dd>` : ""}
     ${s.accountId ? `<dt class="muted">Permissions</dt><dd style="margin:0">${(s.permissions || []).join(", ") || "Full authority"}</dd>` : ""}</dl>`;
-  if (!s.accountId) {
+  if (s.role !== "owner") {
+    $("pwTitle").textContent = "Your password";
+    $("pwForm").classList.add("hidden");
+    $("pwNote").innerHTML = s.accountId ? "Your password is given to you by the business owner or your manager, and only they can change it. If you forgot it or need a new one, ask them to reset it for you." : "You sign in with your team's shared password, which is managed by the manager.";
+  } else if (!s.accountId) {
     $("pwForm").classList.add("hidden");
     $("pwNote").innerHTML = "You sign in with your team's shared password, which is managed by the manager. Personal passwords are available for owner and manager accounts.";
   } else {

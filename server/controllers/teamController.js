@@ -94,7 +94,7 @@ async function create(req, res, next) {
     const acct = await accounts.createAccount({
       role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: grant.departments, permissions: grant.permissions,
-      createdBy: req.user.key, mustChangePassword: true,
+      createdBy: req.user.key, mustChangePassword: false,
       extra: { tier: "staff", staffRole, canManageTeam: false, createdByAccount: req.user.accountId || "owner", createdByName: req.user.name },
     });
     await audit(req, `Team account created (${staffRole})`, acct.id, { departments: acct.departments, permissions: acct.permissions });

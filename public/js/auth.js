@@ -116,7 +116,7 @@ const Auth = (() => {
       window.location.href = `${login}?next=${encodeURIComponent(window.location.pathname)}`;
       return false;
     }
-    if (session.mustChangePassword && !/^\/portal\/account\.html/.test(window.location.pathname)) {
+    if (session.role === "owner" && session.mustChangePassword && !/^\/portal\/account\.html/.test(window.location.pathname)) {
       window.location.href = "/portal/account.html?force=1";
       return false;
     }

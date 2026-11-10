@@ -150,16 +150,19 @@ describe("manager accounts: create, scope, revoke, replace", () => {
     const bad = await request(app).put(`/api/owner/managers/${mgr.id}`).set(bearer(ownerToken)).send({ ...P(1), phone: "12" });
     expect(bad.status).toBe(400);
   });
-  test("first sign-in forces a personal password", async () => {
+  test("managers keep the password they were given: no forced change, no self-service change or reset", async () => {
     const login = await request(app).post("/api/auth/manager-login").send({ identifier: "mary@x.com", password: "Temp-Pass-2026a" });
     expect(login.status).toBe(200);
-    expect(login.body.mustChangePassword).toBe(true);
-    const blocked = await request(app).get("/api/staff/data/orders").set(bearer(login.body.token));
-    expect(blocked.status).toBe(403);
-    expect(blocked.body.error.details.code).toBe("PASSWORD_CHANGE_REQUIRED");
+    expect(login.body.mustChangePassword).toBe(false);
+    expect((await request(app).get("/api/staff/data/orders").set(bearer(login.body.token))).status).toBe(200);   // works at once
     const ch = await request(app).post("/api/account/change-password").set(bearer(login.body.token)).send({ currentPassword: "Temp-Pass-2026a", newPassword: "Mary-Own-Pass-1", confirmPassword: "Mary-Own-Pass-1" });
-    expect(ch.status).toBe(200);
-    mgr.token = ch.body.token;
+    expect(ch.status).toBe(403);
+    const spy = jest.spyOn(console, "log").mockImplementation(() => {});
+    expect((await request(app).post("/api/account/forgot-password").send({ email: "mary@x.com" })).status).toBe(200);
+    expect(spy.mock.calls.some((c) => String(c[0]).includes("password reset code for mary@x.com"))).toBe(false); // no code is created
+    spy.mockRestore();
+    expect((await request(app).post("/api/account/reset-password").send({ email: "mary@x.com", code: "123456", newPassword: "Mary-Own-Pass-1", confirmPassword: "Mary-Own-Pass-1" })).status).toBe(400);
+    mgr.token = login.body.token;
   });
   test("an owner cannot sign in on the manager endpoint and vice versa", async () => {
     expect((await request(app).post("/api/auth/manager-login").send({ identifier: "owner@x.com", password: "Reset-Pass-2026" })).status).toBe(401);
@@ -328,7 +331,7 @@ describe("revocation, history and replacement", () => {
     const off = await request(app).post(`/api/owner/managers/${mgr.id}/status`).set(bearer(ownerToken)).send({ active: false });
     expect(off.body.item.status).toBe("deactivated");
     expect((await request(app).get("/api/staff/data/orders").set(bearer(mgr.token))).status).toBe(401);
-    expect((await request(app).post("/api/auth/manager-login").send({ identifier: "mary@x.com", password: "Mary-Own-Pass-1" })).status).toBe(403);
+    expect((await request(app).post("/api/auth/manager-login").send({ identifier: "mary@x.com", password: "Temp-Pass-2026a" })).status).toBe(403);
     const orders = await request(app).get("/api/staff/data/orders").set(bearer(ownerToken));
     expect(orders.body.items.some((o) => o.id === mgr.orderId)).toBe(true);
     const created = orders.body.items.find((o) => o.id === mgr.orderId);
@@ -346,7 +349,7 @@ describe("revocation, history and replacement", () => {
     expect(rep.body.previous.replacedBy).toBe(rep.body.item.id);
     expect(rep.body.item.departments).toEqual(["restaurant"]);
     const login = (await request(app).post("/api/auth/manager-login").send({ identifier: "nick@x.com", password: "Temp-Pass-2026a" })).body;
-    const chg = await request(app).post("/api/account/change-password").set(bearer(login.token)).send({ currentPassword: "Temp-Pass-2026a", newPassword: "Nick-Own-Pass-1", confirmPassword: "Nick-Own-Pass-1" });
+    const chg = { body: { token: login.token } };
     const orders = await request(app).get("/api/staff/data/orders").set(bearer(chg.body.token));
     expect(orders.status).toBe(200);
     expect(orders.body.items.some((o) => o.id === mgr.orderId)).toBe(true);
@@ -361,7 +364,7 @@ describe("revocation, history and replacement", () => {
     expect(rp.status).toBe(200);
     expect((await request(app).get("/api/staff/data/expenses").set(bearer(mgr2.token))).status).toBe(401); // old session ended
     const login = await request(app).post("/api/auth/manager-login").send({ identifier: "hana@x.com", password: "Owner-Set-Pass-9" });
-    expect(login.body.mustChangePassword).toBe(true);
+    expect(login.body.mustChangePassword).toBe(false);
   });
   test("owner overview and full record access", async () => {
     const ov = await request(app).get("/api/owner/overview").set(bearer(ownerToken));

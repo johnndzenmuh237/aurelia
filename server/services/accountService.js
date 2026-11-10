@@ -155,7 +155,7 @@ async function createAccount({ role, id, fullName, email, username, phone, passw
     tokenVersion: 1,
     failedAttempts: 0,
     lockedUntil: null,
-    mustChangePassword: Boolean(mustChangePassword),
+    mustChangePassword: role === "owner" ? Boolean(mustChangePassword) : false, // managers and team use the password they were given
     departments: role === "manager" ? cleanDepartments(departments) : [],
     permissions: role === "manager" ? cleanPermissions(permissions) : [],
     createdBy: createdBy || "setup",
@@ -256,7 +256,7 @@ async function adminSetPassword(accountId, newPassword, { forceChange = true } =
   await db.collection(ACCOUNTS).doc(accountId).update({
     passwordHash: await hashPassword(newPassword),
     tokenVersion: (acct.tokenVersion || 1) + 1,
-    mustChangePassword: forceChange,
+    mustChangePassword: false, // the person keeps using the password they are given
     failedAttempts: 0, lockedUntil: null,
     passwordChangedAt: nowIso(),
   });
@@ -267,7 +267,8 @@ async function adminSetPassword(accountId, newPassword, { forceChange = true } =
 async function requestReset(email) {
   const acct = await findByIdentifier(email);
   // Same response whether or not the account exists (no account discovery).
-  if (!acct || acct.status !== "active") return;
+  // Self-service reset by email is for the owner only; managers and team ask the person above them.
+  if (!acct || acct.status !== "active" || acct.role !== "owner") return;
   const code = randomCode(6);
   await db.collection(RESETS).doc(acct.id).set({
     codeHash: sha256(`${code}:${acct.id}:${env.jwtSecret}`),
@@ -289,7 +290,7 @@ async function requestReset(email) {
 async function confirmReset(email, code, newPassword) {
   const bad = new ApiError(400, "That code is invalid or has expired.");
   const acct = await findByIdentifier(email);
-  if (!acct || acct.status !== "active") throw bad;
+  if (!acct || acct.status !== "active" || acct.role !== "owner") throw bad;
   const problem = passwordProblem(newPassword);
   if (problem) throw new ApiError(400, problem);
   const ref = db.collection(RESETS).doc(acct.id);

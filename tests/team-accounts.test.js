@@ -40,7 +40,7 @@ describe("a manager creates a team member", () => {
     const r = await request(app).post("/api/team").set(bearer(mgr.token)).send({ fullName: "Rita Receptionist", email: "rita@x.com", password: PW, staffRole: "Receptionist", departments: ["front_desk", "reservations"], permissions: ["view", "create", "edit"], ...P(11) });
     expect(r.status).toBe(201);
     rec = r.body.item;
-    expect(rec).toMatchObject({ tier: "staff", staffRole: "Receptionist", createdByAccount: mgr.id, status: "active", mustChangePassword: true });
+    expect(rec).toMatchObject({ tier: "staff", staffRole: "Receptionist", createdByAccount: mgr.id, status: "active", mustChangePassword: false });
     expect(rec.passwordHash).toBeUndefined();
   });
   test("she appears in the manager's team list and the owner's, and not in the owner's Managers list", async () => {
@@ -54,15 +54,14 @@ describe("a manager creates a team member", () => {
     expect((await request(app).get(`/api/team/${rec.id}`).set(bearer(other))).status).toBe(404);
     expect((await request(app).post(`/api/team/${rec.id}/status`).set(bearer(other)).send({ active: false })).status).toBe(404);
   });
-  test("she signs in with the Personal account login and must change her password first", async () => {
+  test("she signs in with the Personal account login and uses the password she was given", async () => {
     const r = await signIn("rita@x.com", PW);
     expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ role: "manager", tier: "staff", staffRole: "Receptionist", mustChangePassword: true, canManageTeam: false });
+    expect(r.body).toMatchObject({ role: "manager", tier: "staff", staffRole: "Receptionist", mustChangePassword: false, canManageTeam: false });
     recToken = r.body.token;
-    expect((await request(app).get("/api/staff/data/rooms").set(bearer(recToken))).status).toBe(403); // blocked until the password is changed
+    expect((await request(app).get("/api/staff/data/reservations").set(bearer(recToken))).status).toBe(200);   // works straight away
     const c = await request(app).post("/api/account/change-password").set(bearer(recToken)).send({ currentPassword: PW, newPassword: NEWPW, confirmPassword: NEWPW });
-    expect(c.status).toBe(200);
-    recToken = c.body.token;
+    expect(c.status).toBe(403);                                                                                 // she cannot change it
   });
   test("she reaches her own departments and is blocked everywhere else", async () => {
     expect((await request(app).get("/api/staff/data/reservations").set(bearer(recToken))).status).toBe(200);
@@ -121,16 +120,16 @@ describe("deactivation and password reset", () => {
     const r = await request(app).post(`/api/team/${rec.id}/status`).set(bearer(mgr.token)).send({ active: false });
     expect(r.body.item.status).toBe("deactivated");
     expect((await request(app).get("/api/account/me").set(bearer(recToken))).status).toBe(401);
-    const d = await signIn("rita@x.com", NEWPW); expect(d.status).toBe(403); expect(d.body.error.message).toMatch(/deactivated|ended|no longer/i);
+    const d = await signIn("rita@x.com", PW); expect(d.status).toBe(403); expect(d.body.error.message).toMatch(/deactivated|ended|no longer/i);
     expect((await request(app).get("/api/team").set(bearer(mgr.token))).body.items.map((a) => a.email)).toContain("rita@x.com");
   });
-  test("reactivating and resetting the password lets her back in, with a forced change", async () => {
+  test("reactivating and resetting the password (by her manager) lets her back in with the new one", async () => {
     await request(app).post(`/api/team/${rec.id}/status`).set(bearer(mgr.token)).send({ active: true });
     expect((await request(app).post(`/api/team/${rec.id}/reset-password`).set(bearer(mgr.token)).send({ newPassword: "short" })).status).toBe(400);
     expect((await request(app).post(`/api/team/${rec.id}/reset-password`).set(bearer(mgr.token)).send({ newPassword: "Reset-Pass-2026c" })).status).toBe(200);
     const r = await signIn("rita@x.com", "Reset-Pass-2026c");
     expect(r.status).toBe(200);
-    expect(r.body.mustChangePassword).toBe(true);
+    expect(r.body.mustChangePassword).toBe(false);
   });
   test("the owner can create team accounts for any department", async () => {
     const r = await request(app).post("/api/team").set(bearer(owner)).send({ fullName: "Hannah HR", email: "hannah@x.com", password: PW, staffRole: "HR officer", departments: ["hr"], permissions: ["view", "create"], ...P(40) });

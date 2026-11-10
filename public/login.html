@@ -34,7 +34,7 @@
       <div class="field"><label for="mPass">Password<span class="req" aria-hidden="true">*</span></label><input id="mPass" type="password" name="password" autocomplete="current-password" required></div>
       <div class="form-error hidden" id="mgrError" role="alert"></div>
       <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-      <p class="form-note" style="margin-top:14px"><a href="/portal/reset-password.html" style="color:var(--forest);font-weight:600">Forgot password?</a> · <a href="/owner/login.html" style="color:var(--forest);font-weight:600">Business owner sign in</a></p>
+      <p class="form-note" style="margin-top:14px">Forgot your password? Ask your manager or the business owner. · <a href="/owner/login.html" style="color:var(--forest);font-weight:600">Business owner sign in</a></p>
     </form>
     <p class="muted hidden" id="teamLead">Only for the old shared team passwords, if your business still uses them. Choose your team, enter the shared password, and type your name so your actions are recorded correctly.</p>
     <form id="loginForm" class="hidden">
@@ -89,7 +89,7 @@
     if (!d.identifier.trim() || !d.password) { box.textContent = "Enter your email or username and your password."; box.classList.remove("hidden"); return; }
     try {
       const res = await Auth.loginAccount("manager", d.identifier.trim(), d.password);
-      window.location.href = res.mustChangePassword ? "/portal/account.html?force=1" : (Utils.qs("next") || Auth.homeFor());
+      window.location.href = Utils.qs("next") || Auth.homeFor();
     } catch (err) { box.textContent = err.message; box.classList.remove("hidden"); }
   });
 })();

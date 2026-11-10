@@ -47,7 +47,7 @@ function authenticate({ optional = false } = {}) {
           departments: acct.departments || [], permissions: acct.permissions || [],
           tier: acct.tier || (acct.role === "manager" ? "manager" : acct.role),
           canManageTeam: acct.role === "manager" && acct.tier !== "staff" && acct.canManageTeam !== false,
-          mustChangePassword: Boolean(acct.mustChangePassword),
+          mustChangePassword: acct.role === "owner" && Boolean(acct.mustChangePassword),
         };
         req.userProfile = { role: acct.role, fullName: acct.fullName };
 

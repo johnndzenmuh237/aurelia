@@ -41,7 +41,7 @@
       f("emergencyName", "Contact name") +
       `<div class="field-row">` + f("emergencyRelation", "Relationship", { attrs: 'placeholder="e.g. Spouse, Brother"' }) + f("emergencyPhone", "Contact phone", { type: "tel", attrs: 'inputmode="tel"' }) + `</div>` +
       (withPw ? `<div class="form-section">Sign-in</div><div class="field"><label>Username <span class="muted">(optional)</span></label><input name="username" autocomplete="off" placeholder="defaults to the email"></div>
-      ${PortalUI.passwordField({ name: "password", label: "Initial password", meter: true, hint: "They must choose their own password at first sign-in." })}` : "");
+      ${PortalUI.passwordField({ name: "password", label: "Password", meter: true, hint: "Give this password to the person. They cannot change it themselves; only you can reset it later." })}` : "");
   }
 
   function validate(d, needPw) {
@@ -76,7 +76,7 @@
     const roleLabel = a.tier === "staff" ? (a.staffRole || "Team member") : (a.role === "owner" ? "Business owner" : "Manager");
     return `<div class="pf">
       <header class="pf-head"><span class="pf-avatar" aria-hidden="true">${esc(PortalUI.initials ? PortalUI.initials(a.fullName) : (a.fullName || "?").slice(0, 1))}</span>
-        <div><h3>${esc(a.fullName)}</h3><p class="muted">${esc(roleLabel)}${p.position && p.position !== roleLabel ? " · " + esc(p.position) : ""}</p><div class="tags">${status}${a.mustChangePassword ? ' <span class="badge warn">Password change pending</span>' : ""}</div></div></header>
+        <div><h3>${esc(a.fullName)}</h3><p class="muted">${esc(roleLabel)}${p.position && p.position !== roleLabel ? " · " + esc(p.position) : ""}</p><div class="tags">${status}</div></div></header>
       ${incomplete}
       <div class="pf-grid">
         ${sect("Contact", "phone", row("Email", a.email) + row("Phone", a.phone || p.phone) + row("Username", a.username))}

@@ -17,7 +17,7 @@ function session(acct) {
   return {
     token: issueToken(acct), role: acct.role, name: acct.fullName, email: acct.email, accountId: acct.id,
     departments: acct.departments || [], permissions: acct.permissions || [],
-    mustChangePassword: Boolean(acct.mustChangePassword),
+    mustChangePassword: acct.role === "owner" && Boolean(acct.mustChangePassword),
     tier: acct.tier || acct.role, staffRole: acct.staffRole || null,
     canManageTeam: acct.role === "manager" && acct.tier !== "staff" && acct.canManageTeam !== false,
     idleTimeoutMinutes: acct.role === "owner" ? 30 : 60,
@@ -75,6 +75,7 @@ async function me(req, res, next) {
 
 async function changePassword(req, res, next) {
   try {
+    if (req.user.role !== "owner") throw new ApiError(403, "Your password is set by the business owner or your manager. Ask them if you need a new one.");
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
     requireFields(req.body || {}, ["currentPassword", "newPassword"]);
     if (newPassword !== confirmPassword) throw new ApiError(400, "The two new passwords do not match.");
@@ -129,7 +130,7 @@ async function createManager(req, res, next) {
     const acct = await accounts.createAccount({
       role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: b.departments, permissions: b.permissions || ["view", "create", "edit"],
-      createdBy: req.user.key, mustChangePassword: b.mustChangePassword !== false, // first sign-in forces a personal password
+      createdBy: req.user.key, mustChangePassword: false,
       extra: { tier: "manager", canManageTeam: b.canManageTeam !== false && b.canManageTeam !== "false", ...(b.replaces ? { replaces: b.replaces } : {}) },
     });
     await audit(req, "Manager account created", acct.id, { departments: acct.departments, permissions: acct.permissions });
@@ -179,7 +180,7 @@ async function replaceManager(req, res, next) {
     const fresh = await accounts.createAccount({
       role: "manager", fullName: b.fullName, email: b.email, username: b.username, phone: profile.phone, profile, password: b.password,
       departments: b.departments || old.departments, permissions: b.permissions || old.permissions,
-      createdBy: req.user.key, mustChangePassword: true, extra: { replaces: old.id },
+      createdBy: req.user.key, mustChangePassword: false, extra: { replaces: old.id },
     });
     await accounts.setStatus(old.id, false, req.user.key);
     await db.collection(accounts.ACCOUNTS).doc(old.id).update({ replacedBy: fresh.id });
