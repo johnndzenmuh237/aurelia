@@ -45,6 +45,7 @@ function authenticate({ optional = false } = {}) {
           uid: `acct:${acct.id}`, key: `acct:${acct.id}`, accountId: acct.id,
           role: acct.role, name: acct.fullName, email: acct.email,
           departments: acct.departments || [], permissions: acct.permissions || [],
+          createdByAccount: acct.createdByAccount || null,
           tier: acct.tier || (acct.role === "manager" ? "manager" : acct.role),
           canManageTeam: acct.role === "manager" && acct.tier !== "staff" && acct.canManageTeam !== false,
           mustChangePassword: acct.role === "owner" && Boolean(acct.mustChangePassword),

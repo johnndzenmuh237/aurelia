@@ -30,6 +30,12 @@ async function allowedRecipients(user) {
   const mailboxes = [...Object.keys(DEPARTMENTS), "employee"].map((r) => ({ key: `role:${r}`, label: roleLabel(r), kind: "department" }));
   const owner = { key: OWNER_KEY, label: "Business Owner", kind: "owner" };
 
+  // A team member writes only to the manager who created their account (or the owner when the owner did).
+  if (user.tier === "staff") {
+    if (!user.createdByAccount || user.createdByAccount === "owner") return [owner];
+    const boss = mgrEntries.find((m) => m.key === `acct:${user.createdByAccount}`);
+    return boss ? [boss] : [owner];
+  }
   if (user.role === "owner") return [...mgrEntries, ...mailboxes];
   if (isManagerLike(user)) return [owner, ...mgrEntries, ...mailboxes];
   // department staff / employees: only their managers
@@ -168,7 +174,7 @@ async function send(req, res, next) {
 async function announce(req, res, next) {
   try {
     const user = req.user;
-    if (!(user.role === "owner" || isManagerLike(user))) throw new ApiError(403, "Only the owner and managers can send announcements.");
+    if (user.tier === "staff" || !(user.role === "owner" || isManagerLike(user))) throw new ApiError(403, "Only the owner and managers can send announcements.");
     const text = cleanBody(req.body.body);
     const subject = String(req.body.subject || "").trim().slice(0, 120);
     if (!subject) throw new ApiError(400, "An announcement needs a subject.");

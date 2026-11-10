@@ -169,3 +169,19 @@ describe("salary on the registration form", () => {
     expect((await request(app).put("/api/team/anything").set(bearer(staff)).send({ salaryAmount: 999999 })).status).toBeGreaterThanOrEqual(403);
   });
 });
+
+describe("team member requests go to their own manager", () => {
+  test("a team member can only message the manager who created them, and cannot send announcements", async () => {
+    const t = (await signIn("sam@x.com", PW)).body.token;
+    const rcp = (await request(app).get("/api/messages/recipients").set(bearer(t))).body.items;
+    expect(rcp).toHaveLength(1);
+    expect(rcp[0]).toMatchObject({ key: `acct:${mgr.id}`, label: "Grace Manager" });
+    const sent = await request(app).post("/api/messages/send").set(bearer(t)).send({ to: [`acct:${mgr.id}`], subject: "Leave request", body: "May I take Friday off?" });
+    expect(sent.status).toBe(201);
+    const other = await request(app).post("/api/messages/send").set(bearer(t)).send({ to: [`acct:${mgrNoTeam.id}`], subject: "Hi", body: "Not my manager" });
+    expect(other.status).toBe(403);
+    expect((await request(app).post("/api/messages/announce").set(bearer(t)).send({ subject: "All", body: "x", departments: ["all"] })).status).toBe(403);
+    const inbox = (await request(app).get("/api/messages/conversations").set(bearer(mgr.token))).body;     // her manager sees it
+    expect(JSON.stringify(inbox)).toMatch(/Leave request/);
+  });
+});
