@@ -9,7 +9,9 @@
   const GENDERS = ["Female", "Male", "Other", "Prefer not to say"];
   const EMP_TYPES = ["Full-time", "Part-time", "Contract"];
   const COUNTRIES = ["Cameroon", "Nigeria", "Ghana", "Gabon", "Chad", "Central African Republic", "Congo", "DR Congo", "Equatorial Guinea", "Senegal", "Côte d'Ivoire", "Benin", "Togo", "Niger", "Mali", "Burkina Faso", "Kenya", "Uganda", "Tanzania", "Rwanda", "Ethiopia", "South Africa", "Morocco", "Egypt", "France", "United Kingdom", "United States", "Canada", "Germany", "Belgium", "Italy", "Spain", "China", "India", "United Arab Emirates"];
-  const PROFILE_KEYS = ["dateOfBirth", "gender", "nationality", "phone", "addressLine", "city", "region", "country", "idType", "idNumber", "position", "employmentType", "startDate", "emergencyName", "emergencyRelation", "emergencyPhone"];
+  const PROFILE_KEYS = ["dateOfBirth", "gender", "nationality", "phone", "addressLine", "city", "region", "country", "idType", "idNumber", "position", "employmentType", "startDate", "emergencyName", "emergencyRelation", "emergencyPhone", "salaryAmount", "salaryFrequency", "salaryCurrency", "salaryPayMethod"];
+  const FREQS = ["Monthly", "Weekly", "Bi-weekly", "Daily"];
+  const PAYM = ["Cash", "Bank transfer", "MTN Mobile Money", "Orange Money"];
   const opts = (list, sel, blank) => (blank ? `<option value="">${blank}</option>` : "") + list.map(o => `<option ${o === sel ? "selected" : ""}>${esc(o)}</option>`).join("");
   const maxDob = () => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().slice(0, 10); };
   const pick = (d) => Object.fromEntries(PROFILE_KEYS.map(k => [k, (d[k] || "").trim()]));
@@ -37,6 +39,11 @@
       f("position", "Job title", { req: true, attrs: 'placeholder="e.g. Front office manager"' }) +
       `<div class="field-row">` + f("employmentType", "Employment type", { html: `<select name="employmentType">${opts(EMP_TYPES, p.employmentType || "Full-time")}</select>` }) +
       f("startDate", "Start date", { type: "date" }) + `</div>` +
+      `<div class="form-section">Salary</div>` +
+      `<div class="field-row">` + f("salaryAmount", "Agreed salary", { req: true, type: "number", attrs: 'min="0" step="any" inputmode="decimal" placeholder="e.g. 100000"' }) +
+      f("salaryFrequency", "Paid", { html: `<select name="salaryFrequency">${opts(FREQS, p.salaryFrequency || "Monthly")}</select>` }) + `</div>` +
+      `<div class="field-row">` + f("salaryCurrency", "Currency", { value: p.salaryCurrency || "FCFA" }) +
+      f("salaryPayMethod", "Paid by", { html: `<select name="salaryPayMethod">${opts(PAYM, p.salaryPayMethod, "Choose…")}</select>`, hint: "Only you and the owner can see or change this." }) + `</div>` +
       `<div class="form-section">Emergency contact <span class="muted" style="text-transform:none;letter-spacing:0">(optional)</span></div>` +
       f("emergencyName", "Contact name") +
       `<div class="field-row">` + f("emergencyRelation", "Relationship", { attrs: 'placeholder="e.g. Spouse, Brother"' }) + f("emergencyPhone", "Contact phone", { type: "tel", attrs: 'inputmode="tel"' }) + `</div>` +
@@ -60,6 +67,7 @@
     const ep = (d.emergencyPhone || "").trim(), en = (d.emergencyName || "").trim();
     if ((ep || en) && !(ep && en)) bad("Give both the emergency contact's name and phone, or leave both empty.");
     if (ep) { const x = ep.replace(/\D/g, ""); if (x.length < 7 || x.length > 15) bad("The emergency contact phone is not a valid number."); }
+    if (d.salaryAmount === undefined || String(d.salaryAmount).trim() === "" || Number(d.salaryAmount) < 0) bad("Enter the agreed salary (use 0 if unpaid).");
     if (needPw && d.password.length < 10) bad("The initial password must be at least 10 characters.");
   }
 
@@ -84,6 +92,7 @@
         ${sect("Personal", "user", row("Date of birth", fmtDate(p.dateOfBirth)) + row("Gender", p.gender) + row("Nationality", p.nationality))}
         ${sect("Identification", "id-card", row("Document", p.idType) + row("Number", p.idNumber))}
         ${sect("Employment", "briefcase", row("Job title", p.position) + row("Type", p.employmentType) + row("Start date", fmtDate(p.startDate)))}
+        ${sect("Salary", "banknote", row("Agreed salary", p.salaryAmount === null || p.salaryAmount === undefined ? "" : Number(p.salaryAmount).toLocaleString() + " " + (p.salaryCurrency || "FCFA") + " · " + (p.salaryFrequency || "Monthly")) + row("Paid by", p.salaryPayMethod) + row("Salary changes", (a.salaryHistory || []).length > 1 ? (a.salaryHistory || []).map((h) => Number(h.amount).toLocaleString() + " from " + h.effectiveFrom).join("; ") : ""))}
         ${sect("Emergency contact", "heart-pulse", row("Name", p.emergencyName) + row("Relationship", p.emergencyRelation) + row("Phone", p.emergencyPhone))}
         ${sect("Access", "shield-check", row("Departments", (a.departments || []).map((d) => depts[d] || d).join(", ")) + row("Rights", (a.permissions || []).join(", ")) + row("Created", a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "") + (a.createdByName ? row("Created by", a.createdByName) : "") + row("Last sign-in", a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString() : "Never"))}
       </div></div>`;

@@ -146,3 +146,26 @@ async function mkOther() {
   await request(app).post("/api/owner/managers").set(bearer(owner)).send({ fullName: "Other Manager", email: "other@x.com", password: PW, mustChangePassword: false, departments: ["front_desk"], permissions: ["view", "create", "edit"], ...P(50) });
   return (await signIn("other@x.com", PW)).body.token;
 }
+
+describe("salary on the registration form", () => {
+  test("salary is saved at registration, shown on the profile, and changes keep a dated history", async () => {
+    const body = { fullName: "Sam Salary", email: "sam@x.com", password: PW, staffRole: "Receptionist", departments: ["front_desk"], permissions: ["view", "create"], ...P(21), salaryAmount: "100,000", salaryFrequency: "Monthly", salaryCurrency: "fcfa", salaryPayMethod: "MTN Mobile Money" };
+    const c = await request(app).post("/api/team").set(bearer(mgr.token)).send(body);
+    expect(c.status).toBe(201);
+    const got = (await request(app).get(`/api/team/${c.body.item.id}`).set(bearer(mgr.token))).body.item;
+    expect(got.profile).toMatchObject({ salaryAmount: 100000, salaryFrequency: "Monthly", salaryCurrency: "FCFA", salaryPayMethod: "MTN Mobile Money" });
+    expect(got.salaryHistory).toHaveLength(1);
+    const up = await request(app).put(`/api/team/${c.body.item.id}`).set(bearer(mgr.token)).send({ ...P(21), salaryAmount: 120000, salaryFrequency: "Monthly", salaryCurrency: "FCFA" });
+    expect(up.status).toBe(200);
+    const after = (await request(app).get(`/api/team/${c.body.item.id}`).set(bearer(mgr.token))).body.item;
+    expect(after.salaryHistory.map((h) => h.amount)).toEqual([100000, 120000]);   // the earlier entry is kept
+  });
+  test("bad salary values are refused, and staff cannot change their own", async () => {
+    const bad = (extra) => request(app).post("/api/team").set(bearer(mgr.token)).send({ fullName: "Bad Pay", email: "bad@x.com", password: PW, staffRole: "Cashier", departments: ["accountant"], permissions: ["view"], ...P(22), ...extra });
+    expect((await bad({ salaryAmount: -5 })).status).toBe(400);
+    expect((await bad({ salaryAmount: "abc" })).status).toBe(400);
+    expect((await bad({ salaryAmount: 5000, salaryFrequency: "Yearly" })).status).toBe(400);
+    const staff = (await signIn("sam@x.com", PW)).body.token;
+    expect((await request(app).put("/api/team/anything").set(bearer(staff)).send({ salaryAmount: 999999 })).status).toBeGreaterThanOrEqual(403);
+  });
+});

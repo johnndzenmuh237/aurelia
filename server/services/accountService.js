@@ -65,9 +65,11 @@ function validateIdentity({ email, username, fullName }) {
 const ID_TYPES = ["National ID card", "Passport", "Driver's licence", "Residence permit"];
 const GENDERS = ["Female", "Male", "Other", "Prefer not to say"];
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract"];
+const SALARY_FREQUENCIES = ["Monthly", "Weekly", "Bi-weekly", "Daily"];
+const PAY_METHODS = ["Cash", "Bank transfer", "MTN Mobile Money", "Orange Money"];
 const PROFILE_KEYS = ["dateOfBirth", "gender", "nationality", "phone", "addressLine", "city", "region", "country",
   "idType", "idNumber", "position", "employmentType", "startDate",
-  "emergencyName", "emergencyRelation", "emergencyPhone"];
+  "emergencyName", "emergencyRelation", "emergencyPhone", "salaryAmount", "salaryFrequency", "salaryCurrency", "salaryPayMethod"];
 
 const clip = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
@@ -112,6 +114,18 @@ function cleanProfile(input = {}) {
   if (!EMPLOYMENT_TYPES.includes(employmentType)) throw new ApiError(400, "Choose a valid employment type.");
   const startDate = cleanDate(b.startDate, "Start date");
 
+  // Salary (optional on the server so older accounts can still be saved; the registration form asks for it).
+  let salaryAmount = null, salaryFrequency = "", salaryCurrency = "", salaryPayMethod = "";
+  if (b.salaryAmount !== undefined && b.salaryAmount !== null && String(b.salaryAmount).trim() !== "") {
+    salaryAmount = Number(String(b.salaryAmount).replace(/[\s,]/g, ""));
+    if (!Number.isFinite(salaryAmount) || salaryAmount < 0 || salaryAmount > 1e9) throw new ApiError(400, "Enter a valid salary amount (0 or more).");
+    salaryFrequency = clip(b.salaryFrequency, 20) || "Monthly";
+    if (!SALARY_FREQUENCIES.includes(salaryFrequency)) throw new ApiError(400, "Choose how often the salary is paid.");
+    salaryCurrency = (clip(b.salaryCurrency, 6) || "FCFA").toUpperCase();
+    salaryPayMethod = clip(b.salaryPayMethod, 30);
+    if (salaryPayMethod && !PAY_METHODS.includes(salaryPayMethod)) throw new ApiError(400, "Choose a valid salary payment method.");
+  }
+
   const emergencyName = clip(b.emergencyName, 120);
   const emergencyPhone = cleanPhone(b.emergencyPhone, "Emergency contact phone");
   const emergencyRelation = clip(b.emergencyRelation, 60);
@@ -128,6 +142,7 @@ function cleanProfile(input = {}) {
     position: need(clip(b.position, 100), "The job title is required."),
     employmentType, startDate,
     emergencyName, emergencyRelation, emergencyPhone,
+    salaryAmount, salaryFrequency, salaryCurrency, salaryPayMethod,
   };
 }
 const idNumberKey = (p) => idxId("n", `${p.idType}|${p.idNumber.replace(/[\s./-]/g, "")}`);
@@ -150,6 +165,7 @@ async function createAccount({ role, id, fullName, email, username, phone, passw
     username: ident.username || ident.email,
     phone: profile ? profile.phone : (phone ? String(phone).trim() : ""),
     ...(profile ? { profile } : {}),
+    ...(profile && profile.salaryAmount !== null && profile.salaryAmount !== undefined ? { salaryHistory: [{ amount: profile.salaryAmount, frequency: profile.salaryFrequency, currency: profile.salaryCurrency, effectiveFrom: new Date().toISOString().slice(0, 10), setBy: createdBy || null }] } : {}),
     passwordHash,
     status: "active",
     tokenVersion: 1,
@@ -351,6 +367,11 @@ async function updateManager(id, patch, actorKey) {
   if (PROFILE_KEYS.some((k) => patch[k] !== undefined)) {
     const next = cleanProfile({ ...(acct.profile || {}), phone: acct.phone, ...patch });
     update.profile = next;
+    // A salary change adds a new dated entry; earlier entries are never rewritten.
+    const o = acct.profile || {};
+    if (next.salaryAmount !== null && (next.salaryAmount !== o.salaryAmount || next.salaryFrequency !== o.salaryFrequency || next.salaryCurrency !== o.salaryCurrency)) {
+      update.salaryHistory = [...(acct.salaryHistory || []), { amount: next.salaryAmount, frequency: next.salaryFrequency, currency: next.salaryCurrency, effectiveFrom: new Date().toISOString().slice(0, 10), setBy: actorKey || null }];
+    }
     update.phone = next.phone;
     const newKey = idNumberKey(next);
     const oldKey = acct.profile && acct.profile.idNumber ? idNumberKey(acct.profile) : null;
@@ -382,7 +403,7 @@ async function setStatus(id, active, actorKey) {
 }
 
 module.exports = {
-  cleanProfile, ID_TYPES, GENDERS, EMPLOYMENT_TYPES,
+  cleanProfile, ID_TYPES, GENDERS, EMPLOYMENT_TYPES, SALARY_FREQUENCIES, PAY_METHODS,
   ACCOUNTS, publicAccount, createAccount, getAccount, findByIdentifier, login,
   changePassword, adminSetPassword, requestReset, confirmReset,
   listManagers, updateManager, setStatus, cleanDepartments, cleanPermissions, EMAIL_RE,
