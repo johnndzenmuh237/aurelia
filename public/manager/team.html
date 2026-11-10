@@ -1,28 +1,134 @@
-/* Aurelia service worker.
- * - Never touches /api/* or cross-origin requests (live business data is never cached).
- * - Pages: network first, falling back to the last copy, then /offline.html.
- * - Static assets: stale-while-revalidate. */
-const VERSION = "aurelia-v2";
-const PRECACHE = ["/offline.html", "/css/style.css", "/css/admin.css", "/css/app.css", "/js/icons.js", "/js/app-core.js", "/js/auth.js", "/js/utils.js", "/js/config.js", "/icons/icon-192.png", "/favicon.svg"];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Accounts · Aurelia PMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Team Accounts" data-roles="">
+  <div id="admin-content">
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => Promise.allSettled(PRECACHE.map((u) => c.add(u)))).then(() => self.skipWaiting()));
-});
-self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
-});
-self.addEventListener("fetch", (e) => {
-  const req = e.request;
-  const url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.pathname === "/sw.js") return;
-
-  if (req.mode === "navigate") {
-    e.respondWith(fetch(req).then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); return res; })
-      .catch(() => caches.match(req).then((m) => m || caches.match("/offline.html"))));
-    return;
+    <div class="section-head"><div><h2 id="ttl">Team accounts</h2><p class="muted" id="lead">Create personal logins for the people who work with you. They sign in with their own email and password and see only what you give them.</p></div>
+      <button class="btn btn-primary" id="newTeam"><i data-icon="user-plus" data-size="16"></i> New team member</button></div>
+    <div class="panel"><div class="table-toolbar"><input id="q" type="search" placeholder="Search name, email, phone, role…" aria-label="Search team" style="min-width:220px"><select id="st" aria-label="Filter by status"><option value="">All statuses</option><option value="active">Active</option><option value="deactivated">Deactivated</option></select></div>
+      <div class="table-wrap" id="tbl"></div></div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/portal-ui.js"></script>
+<script src="/js/profile-form.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-page-roles.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+document.addEventListener("shell-ready", function () {
+  const $ = (id) => document.getElementById(id), esc = PortalUI.esc, ic = PortalUI.ic;
+  const s = Auth.getSession();
+  const isOwner = s.role === "owner";
+  if (!isOwner && !(s.role === "manager" && s.accountId && s.canManageTeam)) {
+    $("admin-content").innerHTML = `<div class="panel">${PortalUI.empty("lock", "Not available for your account", "Only the business owner, or a manager the owner has allowed to run a team, can create team accounts.")}</div>`;
+    Icons.hydrate(document); return;
   }
-  e.respondWith(caches.match(req).then((hit) => {
-    const net = fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); } return res; }).catch(() => hit);
-    return hit || net;
-  }));
+  if (isOwner) $("lead").textContent = "Every team account created by the owner or by managers. Managers see only their own team.";
+  let team = [], O = { jobRoles: {}, departments: {}, permissions: [] };
+  const PERM_LABEL = { view: "View records", create: "Create records", edit: "Edit records" };
+
+  async function load() {
+    $("tbl").innerHTML = PortalUI.loading(5);
+    try {
+      const [o, d] = await Promise.all([Utils.api("/team/options"), Utils.api("/team")]);
+      O = o; team = d.items; render();
+    } catch (e) { $("tbl").innerHTML = PortalUI.error(e.message); }
+  }
+  function render() {
+    const q = $("q").value.toLowerCase(), st = $("st").value;
+    if (!team.length) { $("tbl").innerHTML = PortalUI.empty("users", "No team accounts yet", "Create the first one: a receptionist, cashier, housekeeper and so on."); return; }
+    const rows = team.filter(m => (!st || m.status === st) && (!q || [m.fullName, m.email, m.username, m.phone, m.staffRole, (m.profile || {}).position].join(" ").toLowerCase().includes(q)));
+    if (!rows.length) { $("tbl").innerHTML = PortalUI.empty("search", "No matches", "Try a different search or filter."); return; }
+    $("tbl").innerHTML = `<table class="data-table stack"><thead><tr><th>Team member</th><th>Role</th><th>Departments</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>` + rows.map(m => `
+      <tr><td data-label="Team member"><b>${esc(m.fullName)}</b><div class="muted" style="font-size:.78rem">${esc(m.email)}</div><div class="muted" style="font-size:.78rem">${esc(m.phone || "")}${isOwner && m.createdByName ? " · added by " + esc(m.createdByName) : ""}</div></td>
+      <td data-label="Role"><span class="badge">${esc(m.staffRole || "Team member")}</span></td>
+      <td data-label="Departments"><div class="tags">${(m.departments || []).map(d => `<span class="badge">${esc(Auth.DEPARTMENTS[d] || d)}</span>`).join("") || '<span class="muted">None</span>'}</div></td>
+      <td data-label="Status">${m.status === "active" ? '<span class="badge">Active</span>' : '<span class="badge off">Deactivated</span>'}${m.mustChangePassword ? ' <span class="badge warn">Password change pending</span>' : ""}${m.locked ? ' <span class="badge bad">Locked</span>' : ""}</td>
+      <td data-label="Last sign-in" class="muted" style="font-size:.8rem">${m.lastLoginAt ? Utils.formatDateTime(m.lastLoginAt) : "Never"}</td>
+      <td class="actions"><div class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-a="view" data-id="${m.id}">${ic("id-card", 15)} Profile</button>
+        <button class="btn btn-ghost btn-sm" data-a="edit" data-id="${m.id}">${ic("pencil", 15)} Edit</button>
+        <button class="btn btn-ghost btn-sm" data-a="pw" data-id="${m.id}">${ic("key-round", 15)} Reset password</button>
+        ${m.status === "active" ? `<button class="btn btn-danger btn-sm" data-a="off" data-id="${m.id}">${ic("user-x", 15)} Deactivate</button>` : `<button class="btn btn-outline btn-sm" data-a="on" data-id="${m.id}">${ic("user-check", 15)} Restore</button>`}
+      </div></td></tr>`).join("") + `</tbody></table>`;
+  }
+  $("q").addEventListener("input", render); $("st").addEventListener("change", render);
+
+  const picked = (form, n) => [...form.querySelectorAll(`input[name=${n}]:checked`)].map(i => i.value);
+  const roleSelect = (sel) => `<div class="field"><label>Job role<span class="req">*</span></label><select name="staffRole" required><option value="">Select…</option>${Object.keys(O.jobRoles).map(r => `<option ${r === sel ? "selected" : ""}>${esc(r)}</option>`).join("")}</select><span class="hint">Choosing a role pre-selects the usual departments below. You can change them.</span></div>`;
+  const deptChecks = (sel = []) => `<div class="check-grid">` + Object.entries(O.departments).map(([k, v]) => `<label class="check-item"><input type="checkbox" name="dept" value="${k}" ${sel.includes(k) ? "checked" : ""}> ${esc(v)}</label>`).join("") + `</div>` + (Object.keys(O.departments).length ? "" : `<p class="muted">You have no departments to hand out.</p>`);
+  const permChecks = (sel = ["view"]) => `<div class="check-grid">` + O.permissions.map(p => `<label class="check-item"><input type="checkbox" name="perm" value="${p}" ${sel.includes(p) ? "checked" : ""} ${p === "view" ? "disabled checked" : ""}> ${esc(PERM_LABEL[p] || p)}</label>`).join("") + `</div><p class="muted" style="font-size:.8rem;margin-top:8px">Team members can never delete records or approve things.</p>`;
+  function wireRole(el) {
+    const sel = el.querySelector("[name=staffRole]"); if (!sel) return;
+    sel.addEventListener("change", () => { const want = O.jobRoles[sel.value] || []; el.querySelectorAll("input[name=dept]").forEach(i => { i.checked = want.includes(i.value); }); });
+  }
+  const access = (m) => `<div class="form-section">Access</div>` + roleSelect(m && m.staffRole) + `<div class="form-section">Departments</div>${deptChecks(m && m.departments)}<div class="form-section">Rights</div>${permChecks(m && m.permissions)}`;
+
+  $("newTeam").addEventListener("click", () => {
+    const dlg = PortalUI.modal({ title: "New team member", submitText: "Create account", body: ProfileForm.fields({}, true) + access(),
+      onSubmit: async (form, close) => {
+        const d = PortalUI.formData(form); ProfileForm.validate(d, true);
+        if (!d.staffRole) throw new Error("Choose the job role.");
+        await Utils.api("/team", { method: "POST", body: { ...d, departments: picked(form, "dept"), permissions: ["view", ...picked(form, "perm")] } });
+        close(); Utils.toast("Team account created. Share the email and temporary password with them.", "success"); load();
+      } });
+    PortalUI.wirePasswords(dlg.el); wireRole(dlg.el);
+  });
+
+  const byId = (id) => team.find(m => m.id === id);
+  $("tbl").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const m = byId(b.dataset.id), a = b.dataset.a;
+    if (a === "view") PortalUI.modal({ title: "Profile", hideFooter: true, body: ProfileForm.card(m, Auth.DEPARTMENTS) });
+    else if (a === "edit") {
+      const dlg = PortalUI.modal({ title: "Edit " + m.fullName, body: ProfileForm.fields(m, false) + access(m),
+        onSubmit: async (form, close) => {
+          const d = PortalUI.formData(form); ProfileForm.validate(d, false);
+          if (!d.staffRole) throw new Error("Choose the job role.");
+          await Utils.api("/team/" + m.id, { method: "PUT", body: { fullName: d.fullName, email: d.email, staffRole: d.staffRole, ...ProfileForm.pick(d), departments: picked(form, "dept"), permissions: ["view", ...picked(form, "perm")] } });
+          close(); Utils.toast("Team member updated.", "success"); load();
+        } });
+      wireRole(dlg.el);
+    } else if (a === "pw") {
+      const dlg = PortalUI.modal({ title: "Reset password — " + m.fullName, submitText: "Reset password", body: `<p class="muted">Set a temporary password. They are signed out everywhere and must choose a new one at next sign-in.</p>` + PortalUI.passwordField({ name: "newPassword", label: "Temporary password", meter: true }),
+        onSubmit: async (form, close) => {
+          const d = PortalUI.formData(form); if (d.newPassword.length < 10) throw new Error("Use at least 10 characters.");
+          await Utils.api(`/team/${m.id}/reset-password`, { method: "POST", body: { newPassword: d.newPassword } });
+          close(); Utils.toast("Password reset.", "success"); load();
+        } });
+      PortalUI.wirePasswords(dlg.el);
+    } else if (a === "off") {
+      if (await Utils.confirmDialog({ title: "Deactivate this account?", message: `${m.fullName} will be signed out immediately and cannot sign in again. Everything they recorded stays exactly as it is.`, confirmText: "Deactivate", danger: true })) {
+        try { await Utils.api(`/team/${m.id}/status`, { method: "POST", body: { active: false } }); Utils.toast("Account deactivated.", "success"); load(); } catch (err) { Utils.toast(err.message, "error"); }
+      }
+    } else if (a === "on") {
+      try { await Utils.api(`/team/${m.id}/status`, { method: "POST", body: { active: true } }); Utils.toast("Account restored.", "success"); load(); } catch (err) { Utils.toast(err.message, "error"); }
+    }
+  });
+  load();
+  Icons.hydrate(document);
 });
+</script>
+<script src="/js/app-core.js"></script>
+</body>
+</html>
