@@ -271,6 +271,12 @@ window.ADMIN_PAGE_ROLES = {
   "manager",
   "restaurant"
  ],
+ "/admin/restaurant/stock.html": [
+  "super_admin",
+  "manager",
+  "restaurant",
+  "accountant"
+ ],
  "/admin/restaurant/tables.html": [
   "super_admin",
   "manager",

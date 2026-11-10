@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant Stock &amp; Inventory · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="Restaurant Stock &amp; Inventory" data-roles="super_admin,manager,restaurant,accountant">
+  <div id="admin-content">
+    <div id="totals" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px"></div>
+    <div id="alerts"></div>
+
+    <div class="panel" id="formPanel">
+      <div class="panel-head"><h3>Register purchased stock</h3></div>
+      <div class="panel-body">
+        <form id="rf">
+          <div class="field-row"><div class="field"><label>Item name *</label><input name="name" list="names" required placeholder="e.g. Rice"><datalist id="names"></datalist></div>
+            <div class="field"><label>Category</label><select name="category"><option>Grains &amp; staples</option><option>Meat &amp; fish</option><option>Vegetables &amp; fruit</option><option>Dairy &amp; eggs</option><option>Spices &amp; seasoning</option><option>Oils &amp; sauces</option><option>Beverages</option><option>Packaging</option><option>Cleaning</option><option>Other</option></select></div></div>
+          <div class="field-row"><div class="field"><label>Quantity purchased *</label><input type="number" name="quantity" min="0" step="any" required></div>
+            <div class="field"><label>Unit *</label><input name="unit" list="units" required placeholder="bag, kg, carton, piece"><datalist id="units"><option>bag</option><option>kg</option><option>carton</option><option>piece</option><option>litre</option><option>crate</option><option>pack</option></datalist></div></div>
+          <div class="field-row"><div class="field"><label>Unit purchase price (FCFA) *</label><input type="number" name="unitCost" min="0" step="any" required></div>
+            <div class="field"><label>Total purchase cost</label><input id="total" readonly placeholder="Calculated for you"></div></div>
+          <div class="field-row"><div class="field"><label>Supplier</label><input name="supplier"></div>
+            <div class="field"><label>Purchase date *</label><input type="date" name="purchaseDate" required></div></div>
+          <div class="field-row"><div class="field"><label>Expiry date (if any)</label><input type="date" name="expiryDate"></div>
+            <div class="field"><label>Storage location</label><input name="storageLocation" placeholder="Dry store, cold room…"></div></div>
+          <div class="field-row"><div class="field"><label>Expected revenue from this stock (FCFA)</label><input type="number" name="expectedRevenue" min="0" step="any"></div>
+            <div class="field"><label>Alert me when stock is at or below</label><input type="number" name="minStock" min="0" step="any"></div></div>
+          <div class="field"><label>Receipt / invoice number</label><input name="receiptRef"></div>
+          <div class="field"><label>Description / notes</label><textarea name="notes" rows="2"></textarea></div>
+          <button class="btn btn-primary" type="submit">Register stock</button>
+          <p class="form-note">Totals, remaining stock, value and profit are calculated by the system from what you register. If the item already exists, the quantity is added to it.</p>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel"><div class="panel-head"><h3>Stock on hand</h3></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Item</th><th>Remaining</th><th>Bought</th><th>Spent</th><th>Used</th><th>Wasted</th><th>Value left</th><th>Expiry</th><th></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="9"><div class="empty-state">Loading…</div></td></tr></tbody></table></div></div>
+
+    <div class="panel"><div class="panel-head"><h3>Stock movements</h3></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>When</th><th>Item</th><th>Movement</th><th>Qty</th><th>By</th><th>Reason / supplier</th></tr></thead>
+      <tbody id="moves"></tbody></table></div></div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => Utils.esc(String(s ?? ""));
+const money = (n) => Utils.formatMoney(n);
+const LABEL = { received: "Received", issued: "Issued to kitchen", consumed: "Consumed", consumption: "Used in a sale", wasted: "Wasted", returned: "Returned", adjusted: "Adjusted" };
+let booted = false, canWrite = false, data = null;
+
+async function boot() {
+  if (booted || !window.Auth || !Auth.getSession()) return; booted = true;
+  canWrite = Auth.can(["restaurant", "manager"]) && Auth.getSession().role !== undefined;
+  if (!canWrite) $("formPanel").classList.add("hidden");
+  $("rf").purchaseDate.value = new Date().toISOString().slice(0, 10);
+  $("rf").purchaseDate.max = $("rf").purchaseDate.value;
+  const calc = () => { const f = $("rf"); const t = (Number(f.quantity.value) || 0) * (Number(f.unitCost.value) || 0); $("total").value = t ? money(t) : ""; };
+  $("rf").quantity.addEventListener("input", calc); $("rf").unitCost.addEventListener("input", calc);
+  $("rf").addEventListener("submit", register);
+  $("rows").addEventListener("click", rowClick);
+  await load();
+}
+document.addEventListener("DOMContentLoaded", boot);
+if (document.readyState !== "loading") setTimeout(boot, 0);
+
+async function load() {
+  try {
+    data = await Utils.api("/restaurant/stock");
+    const t = data.totals, card = (l, v, cls = "") => `<div class="stat-card ${cls}"><div class="stat-label">${l}</div><div class="stat-value" style="font-size:1.3rem">${v}</div></div>`;
+    $("totals").innerHTML = card("Items in stock", t.itemCount) + card("Total spent on stock", money(t.totalSpent)) + card("Stock value remaining", money(t.stockValueRemaining)) +
+      card("Cost of stock used", money(t.consumedCost)) + card("Cost of waste", money(t.wastedCost), t.wastedCost ? "stat-warn" : "") +
+      card("Expected revenue", money(t.expectedRevenue)) + card("Expected profit", money(t.expectedProfit)) +
+      card("Actual sales so far", money(t.actualSales)) + card("Actual profit so far", money(t.actualProfit));
+    $("alerts").innerHTML = data.alerts.length ? `<div class="panel"><div class="panel-head"><h3>Alerts (${data.alerts.length})</h3></div><div class="panel-body">${data.alerts.map((a) => `<div class="alert alert-${a.level === "danger" ? "error" : "info"}" style="margin-bottom:6px">${esc(a.text)}</div>`).join("")}</div></div>` : "";
+    $("names").innerHTML = data.items.map((i) => `<option value="${esc(i.name)}">`).join("");
+    $("rows").innerHTML = data.items.map((i) => `<tr><td><b>${esc(i.name)}</b><div class="form-note">${esc(i.category)}${i.supplier ? " · " + esc(i.supplier) : ""}${i.location ? " · " + esc(i.location) : ""}</div></td>
+      <td><b>${i.quantity} ${esc(i.unit)}</b></td><td>${i.purchased}</td><td>${money(i.spent)}</td><td>${i.consumed}</td><td>${i.wasted}</td><td>${money(i.valueRemaining)}</td><td>${esc(i.expiryDate || "—")}</td>
+      <td>${canWrite ? `<button class="btn btn-ghost btn-sm" data-id="${i.id}">Record movement</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="9"><div class="empty-state">No restaurant stock registered yet. Use the form above.</div></td></tr>`;
+    $("moves").innerHTML = data.movements.map((m) => `<tr><td>${Utils.formatDateTime(m.at)}</td><td>${esc(m.item)}</td><td>${esc(LABEL[m.type] || m.type)}</td><td style="font-weight:700;color:${m.quantity < 0 ? "var(--danger,#b3261e)" : "inherit"}">${m.quantity > 0 ? "+" : ""}${m.quantity}</td><td>${esc(m.byName)}</td><td>${esc(m.reason || m.supplier || "")}</td></tr>`).join("") || `<tr><td colspan="6"><div class="empty-state">No movements yet.</div></td></tr>`;
+  } catch (err) { Utils.toast(err.message, "error"); }
+}
+
+async function register(e) {
+  e.preventDefault();
+  const f = new FormData(e.target), body = Object.fromEntries(f.entries());
+  const btn = e.target.querySelector("button[type=submit]"); btn.disabled = true;
+  try {
+    const r = await Utils.api("/restaurant/stock/receive", { method: "POST", body });
+    Utils.toast(`${r.name} registered — ${money(r.cost)} spent.`, "success");
+    e.target.reset(); $("total").value = ""; $("rf").purchaseDate.value = new Date().toISOString().slice(0, 10);
+    load();
+  } catch (err) { Utils.toast(err.message, "error"); } finally { btn.disabled = false; }
+}
+
+function rowClick(e) {
+  const b = e.target.closest("[data-id]"); if (!b) return;
+  const it = data.items.find((x) => x.id === b.dataset.id);
+  const w = document.createElement("div");
+  w.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px";
+  w.innerHTML = `<form class="panel" style="max-width:420px;width:100%;margin:0"><div class="panel-head"><h3>${esc(it.name)} — ${it.quantity} ${esc(it.unit)} in stock</h3></div><div class="panel-body">
+    <div class="field"><label>Movement</label><select name="type"><option value="issued">Issued to kitchen</option><option value="consumed">Consumed</option><option value="wasted">Wasted / spoiled</option><option value="returned">Returned to stock</option><option value="adjusted">Stock-count adjustment</option></select></div>
+    <div class="field" id="dirBox" style="display:none"><label>Adjustment</label><select name="direction"><option value="decrease">Decrease (stock is lower than the system)</option><option value="increase">Increase (stock is higher)</option></select></div>
+    <div class="field"><label>Quantity (${esc(it.unit)})</label><input type="number" name="quantity" min="0" step="any" required></div>
+    <div class="field"><label>Reason (required for waste and adjustments)</label><input name="reason"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-primary" type="submit">Save</button><button class="btn btn-ghost" type="button" id="x">Cancel</button></div></div></form>`;
+  document.body.appendChild(w);
+  const f = w.querySelector("form");
+  f.type.addEventListener("change", () => { w.querySelector("#dirBox").style.display = f.type.value === "adjusted" ? "" : "none"; });
+  w.querySelector("#x").onclick = () => w.remove();
+  f.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try { await Utils.api("/restaurant/stock/move", { method: "POST", body: { itemId: it.id, ...Object.fromEntries(new FormData(f).entries()) } }); w.remove(); Utils.toast("Movement recorded.", "success"); load(); }
+    catch (err) { Utils.toast(err.message, "error"); }
+  });
+}
+</script>
+</body>
+</html>

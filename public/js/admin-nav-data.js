@@ -36,6 +36,7 @@ window.ADMIN_NAV = [
     { href: "/admin/restaurant/menu.html", label: "Menu", icon: "book-open" },
     { href: "/admin/restaurant/tables.html", label: "Tables", icon: "calendar-days" },
     { href: "/admin/restaurant/kitchen.html", label: "Kitchen", icon: "chef-hat" },
+    { href: "/admin/restaurant/stock.html", label: "Stock & Inventory", icon: "boxes" },
   ]},
   { group: "Bar", items: [
     { href: "/admin/bar-dashboard.html", label: "Dashboard", icon: "layout-dashboard" },

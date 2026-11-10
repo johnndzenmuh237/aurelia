@@ -15,10 +15,11 @@ async function decrementInventoryForOrder(items) {
     const doc = snap.docs[0];
     const data = doc.data();
     const newQty = Math.max(0, Number(data.quantity || 0) - Number(item.quantity || 1));
-    await doc.ref.update({ quantity: newQty });
+    const used = Number(data.quantity || 0) - newQty;
+    await doc.ref.update({ quantity: newQty, ...(data.department === "restaurant" ? { consumed: Number(data.consumed || 0) + used } : {}) });
 
     await db.collection("inventoryTransactions").add({
-      item: item.name, type: "consumption", quantity: -Math.abs(item.quantity || 1),
+      item: item.name, itemId: doc.id, ...(data.department === "restaurant" ? { department: "restaurant", unitCost: data.unitCost || null, cost: Math.round(used * (data.unitCost || 0) * 100) / 100 } : {}), type: "consumption", quantity: -Math.abs(item.quantity || 1),
       reference: item.reference || "order", createdAt: FieldValue.serverTimestamp(),
     });
 

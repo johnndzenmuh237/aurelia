@@ -22,6 +22,7 @@ const teamController = require("./controllers/teamController");
 const notificationController = require("./controllers/notificationController");
 const messageController = require("./controllers/messageController");
 const dailyCloseController = require("./controllers/dailyCloseController");
+const restaurantStockController = require("./controllers/restaurantStockController");
 
 const app = express();
 // Hides the "X-Powered-By: Express" header and disables Express's debug
@@ -200,6 +201,11 @@ app.get("/api/debts", staff, requireRole("manager", "accountant"), financeContro
 
 app.post("/api/salaries/pay", staff, requireRole("accountant", "manager"), financeController.paySalary);
 app.get("/api/salaries/outstanding", staff, requireRole("accountant", "manager", "hr"), financeController.listOutstandingSalaries);
+
+// ---------------- Restaurant stock (registered by the restaurant department; owner sees everything) ----------------
+app.get("/api/restaurant/stock", staff, requireRole("restaurant", "accountant", "manager"), restaurantStockController.summary);
+app.post("/api/restaurant/stock/receive", staff, requireRole("restaurant", "manager"), restaurantStockController.receive);
+app.post("/api/restaurant/stock/move", staff, requireRole("restaurant", "manager"), restaurantStockController.move);
 
 // ---------------- End-of-day close (each department submits; owner/managers see differences) ----------------
 const CLOSE_ROLES = { restaurant: ["restaurant", "manager"], bar: ["restaurant", "manager"], cashier: ["accountant", "manager"], reception: ["front_desk", "manager"] };
