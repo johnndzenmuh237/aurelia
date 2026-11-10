@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>End-of-Day Close · Aurelia PMS Admin</title><meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#163A30">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/js/icons.js"></script>
+</head>
+<body>
+<div id="admin-shell" data-title="End-of-Day Close" data-roles="super_admin,manager,restaurant,accountant,front_desk">
+  <div id="admin-content">
+    <div class="panel">
+      <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0"><label>Day</label><input type="date" id="day"></div>
+        <div id="ticks" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+      <div class="panel-body" style="padding-top:0"><div id="tabs" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+    </div>
+    <div id="view"></div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script type="module" src="/js/firebase.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin-nav-data.js"></script>
+<script src="/js/admin-layout.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => Utils.esc(String(s ?? ""));
+const money = (n) => Utils.formatMoney(n);
+const METHODS = [["cash", "Cash"], ["mtn_momo", "MTN Mobile Money"], ["orange_money", "Orange Money"], ["card", "Card"], ["other", "Other"]];
+const FORMS = [
+  { key: "restaurant", label: "Restaurant", roles: ["restaurant", "manager"] },
+  { key: "bar", label: "Bar", roles: ["restaurant", "manager"] },
+  { key: "cashier", label: "Cashier", roles: ["accountant", "manager"] },
+  { key: "reception", label: "Reception", roles: ["front_desk", "manager"] },
+];
+let lists = { bar: [], stock: [] }, tab = null, mine = [], canReport = false;
+
+document.addEventListener("DOMContentLoaded", boot);
+if (document.readyState !== "loading") setTimeout(boot, 0);
+let booted = false;
+async function boot() {
+  if (booted || !window.Auth || !Auth.getSession()) return; booted = true;
+  $("day").value = new Date().toISOString().slice(0, 10);
+  $("day").max = $("day").value;
+  $("day").addEventListener("change", () => { loadTicks(); render(); });
+  mine = FORMS.filter((f) => Auth.can(f.roles));
+  canReport = Auth.can(["manager", "super_admin"]);
+  try { lists = await Utils.api("/daily-close/lists"); } catch (e) { /* forms still work without suggestions */ }
+  const tabs = [...mine.map((f) => ({ key: f.key, label: `Close: ${f.label}` })), ...(canReport ? [{ key: "report", label: "Daily report" }] : [])];
+  tab = tabs[0]?.key;
+  $("tabs").innerHTML = tabs.map((t) => `<button class="btn btn-ghost" data-t="${t.key}">${t.label}</button>`).join("");
+  $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) { tab = b.dataset.t; render(); } });
+  loadTicks(); render();
+}
+async function loadTicks() {
+  try {
+    const s = await Utils.api("/daily-close/status?date=" + $("day").value);
+    $("ticks").innerHTML = s.departments.map((d) => `<span class="badge ${d.submitted ? (d.status === "flagged" && canReport ? "warn" : "ok") : ""}">${d.label}: ${d.submitted ? "submitted" : "not yet"}</span>`).join("");
+  } catch (e) { $("ticks").innerHTML = ""; }
+}
+function render() {
+  document.querySelectorAll("#tabs [data-t]").forEach((b) => b.classList.toggle("btn-primary", b.dataset.t === tab));
+  if (tab === "report") return renderReport();
+  if (tab) renderForm(tab);
+}
+
+/* ---------------- forms (blind: no system figures are shown) ---------------- */
+const num = (name, label, hint = "") => `<div class="field"><label>${label}</label><input type="number" min="0" step="any" name="${name}" required>${hint ? `<div class="form-note">${hint}</div>` : ""}</div>`;
+function renderForm(key) {
+  let body = "";
+  if (key === "restaurant") {
+    body = num("salesReported", "Total restaurant sales today (FCFA)") + num("platesSold", "Plates sold (optional)").replace(" required", "") +
+      `<h4 style="margin:16px 0 8px">Remaining stock — count what is physically in the store</h4>
+      <div id="rows"></div><button type="button" class="btn btn-ghost" id="addRow">+ Add item</button>
+      <datalist id="stockNames">${(lists.stock || []).map((s) => `<option value="${esc(s.name)}">`).join("")}</datalist>`;
+  } else if (key === "bar") {
+    body = num("salesReported", "Total bar sales today (FCFA)") + `<h4 style="margin:16px 0 8px">Count every drink</h4>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Drink</th><th>Sold today</th><th>Remaining</th></tr></thead><tbody>
+      ${(lists.bar || []).map((d) => `<tr data-id="${esc(d.id)}"><td>${esc(d.name)} <small>(${esc(d.unit || "")})</small></td><td><input type="number" min="0" class="sold" style="width:90px" value="0"></td><td><input type="number" min="0" class="rem" style="width:90px" required></td></tr>`).join("") || `<tr><td colspan="3"><div class="empty-state">No drinks registered yet.</div></td></tr>`}
+      </tbody></table></div>`;
+  } else if (key === "cashier") {
+    body = `<p class="form-note">Count the money you actually hold for each method. Enter 0 where there is none.</p>` + METHODS.map(([k, l]) => num("r_" + k, l + " received (FCFA)")).join("");
+  } else {
+    body = num("occupied", "Rooms occupied tonight") + num("checkIns", "Check-ins today") + num("checkOuts", "Check-outs today");
+  }
+  $("view").innerHTML = `<div class="panel" style="max-width:640px"><div class="panel-head"><h3>${FORMS.find((f) => f.key === key).label} — end of day</h3></div><div class="panel-body">
+    <form id="f">${body}<div class="field"><label>Notes (optional)</label><textarea name="notes" rows="2" placeholder="Anything the owner should know — breakage, complimentary items, errors…"></textarea></div>
+    <button class="btn btn-primary btn-block" type="submit">Submit end-of-day close</button>
+    <p class="form-note" style="margin-top:8px">If you submit again for the same day, your first version is kept in the history.</p></form></div></div>`;
+  if (key === "restaurant") {
+    const add = () => { const d = document.createElement("div"); d.style.cssText = "display:flex;gap:8px;margin-bottom:8px"; d.innerHTML = `<input list="stockNames" class="sn" placeholder="Item (e.g. Rice)" style="flex:2"><input type="number" min="0" step="any" class="sc" placeholder="Remaining" style="flex:1">`; $("rows").appendChild(d); };
+    $("addRow").onclick = add; (lists.stock || []).slice(0, 8).forEach(add); if (!(lists.stock || []).length) add();
+  }
+  $("f").addEventListener("submit", (e) => submit(e, key));
+}
+async function submit(e, key) {
+  e.preventDefault();
+  const f = new FormData(e.target), v = (n) => f.get(n);
+  const body = { date: $("day").value, notes: v("notes") };
+  if (key === "restaurant") {
+    body.salesReported = v("salesReported"); body.platesSold = v("platesSold");
+    body.stock = [...document.querySelectorAll("#rows > div")].map((r) => ({ name: r.querySelector(".sn").value.trim(), counted: r.querySelector(".sc").value })).filter((s) => s.name && s.counted !== "");
+  } else if (key === "bar") {
+    body.salesReported = v("salesReported");
+    body.drinks = [...document.querySelectorAll("tr[data-id]")].map((r) => ({ itemId: r.dataset.id, sold: r.querySelector(".sold").value || 0, remaining: r.querySelector(".rem").value }));
+  } else if (key === "cashier") {
+    body.received = Object.fromEntries(METHODS.map(([k]) => [k, v("r_" + k)]));
+  } else { body.occupied = v("occupied"); body.checkIns = v("checkIns"); body.checkOuts = v("checkOuts"); }
+  const btn = e.target.querySelector("button[type=submit]"); btn.disabled = true;
+  try {
+    const r = await Utils.api("/daily-close/" + key, { method: "POST", body });
+    Utils.toast(r.corrected ? "Close corrected. The earlier version is kept." : "End-of-day close submitted.", "success");
+    loadTicks();
+    e.target.reset();
+  } catch (err) { Utils.toast(err.message, "error"); } finally { btn.disabled = false; }
+}
+
+/* ---------------- consolidated report (managers + owner) ---------------- */
+async function renderReport() {
+  $("view").innerHTML = `<div class="panel"><div class="panel-body"><div class="empty-state">Loading…</div></div></div>`;
+  try {
+    const r = await Utils.api("/daily-close/report?date=" + $("day").value);
+    const stat = { missing: ["Not submitted", "danger"], flagged: ["Differences", "warn"], balanced: ["Balanced", "ok"] };
+    const issueLabel = { missing: "Missing close", unrecorded_sale: "Unrecorded sale", overstated_sale: "Sales overstated", cash_short: "Cash short", cash_over: "Cash over", missing_stock: "Missing stock", stock_surplus: "Stock surplus", difference: "Difference" };
+    $("view").innerHTML = `
+      <div class="panel"><div class="panel-head"><h3>Consolidated report — ${esc(r.date)}</h3></div><div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+          <div class="stat-card"><div class="stat-label">Recorded sales (restaurant + bar)</div><div class="stat-value">${money(r.totals.systemSales)}</div></div>
+          <div class="stat-card"><div class="stat-label">Money expected</div><div class="stat-value">${r.totals.systemCashExpected === null ? "—" : money(r.totals.systemCashExpected)}</div></div>
+          <div class="stat-card"><div class="stat-label">Cash short / over</div><div class="stat-value">${r.totals.cashShortOrOver === null ? "—" : money(r.totals.cashShortOrOver)}</div></div>
+          <div class="stat-card"><div class="stat-label">Salaries paid (separate)</div><div class="stat-value">${money(r.payroll.paid)}</div></div>
+        </div>
+        <p class="form-note" style="margin-top:8px">${esc(r.payroll.note)}</p>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h3>Problems to look at (${r.issues.length})</h3></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Department</th><th>Type</th><th>Detail</th></tr></thead><tbody>
+        ${r.issues.map((i) => `<tr><td>${esc(i.department)}</td><td><span class="badge ${i.type === "missing" || i.type === "cash_short" || i.type === "missing_stock" ? "danger" : "warn"}">${issueLabel[i.type] || i.type}</span></td><td>${esc(i.text)}</td></tr>`).join("") || `<tr><td colspan="3"><div class="empty-state">Nothing to flag. Every submitted count matches the system.</div></td></tr>`}
+        </tbody></table></div></div>
+      ${r.departments.map((d) => `<div class="panel"><div class="panel-head" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3>${esc(d.label)}</h3>
+        <span class="badge ${stat[d.status][1]}">${stat[d.status][0]}</span></div>
+        <div class="panel-body">${d.status === "missing" ? `<div class="empty-state">No submission for this day.</div>` : `
+          <p class="form-note">Submitted by ${esc(d.submittedByName)}${d.corrections ? ` · corrected ${d.corrections} time(s)` : ""}${d.notes ? ` · Note: ${esc(d.notes)}` : ""}</p>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Item</th><th>System</th><th>Counted</th><th>Difference</th></tr></thead><tbody>
+          ${d.lines.map((l) => { const f = (x) => (x === null ? "—" : l.kind === "money" ? money(x) : x); return `<tr><td>${esc(l.label)}</td><td>${f(l.expected)}</td><td>${f(l.actual)}</td><td style="font-weight:700;color:${l.flagged ? "var(--danger,#b3261e)" : "inherit"}">${l.diff === null ? "not found" : (l.diff > 0 ? "+" : "") + f(l.diff)}</td></tr>`; }).join("")}
+          </tbody></table></div>`}</div></div>`).join("")}`;
+  } catch (err) { $("view").innerHTML = `<div class="panel"><div class="panel-body"><div class="empty-state">${esc(err.message)}</div></div></div>`; }
+}
+</script>
+</body>
+</html>

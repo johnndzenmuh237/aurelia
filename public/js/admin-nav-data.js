@@ -4,6 +4,7 @@
 
 window.ADMIN_NAV = [
   { group: null, items: [{ href: "/admin/dashboard.html", label: "Dashboard", icon: "layout-dashboard" }] },
+  { group: "Daily Close", items: [{ href: "/admin/daily-close.html", label: "End-of-Day Close", icon: "clipboard-check" }] },
   { group: "Reservations", items: [
     { href: "/admin/reservation-calendar.html", label: "Calendar", icon: "calendar-days" },
     { href: "/admin/reservations.html", label: "All Reservations", icon: "list-checks" },

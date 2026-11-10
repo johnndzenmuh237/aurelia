@@ -21,6 +21,7 @@ const ownerController = require("./controllers/ownerController");
 const teamController = require("./controllers/teamController");
 const notificationController = require("./controllers/notificationController");
 const messageController = require("./controllers/messageController");
+const dailyCloseController = require("./controllers/dailyCloseController");
 
 const app = express();
 // Hides the "X-Powered-By: Express" header and disables Express's debug
@@ -199,6 +200,17 @@ app.get("/api/debts", staff, requireRole("manager", "accountant"), financeContro
 
 app.post("/api/salaries/pay", staff, requireRole("accountant", "manager"), financeController.paySalary);
 app.get("/api/salaries/outstanding", staff, requireRole("accountant", "manager", "hr"), financeController.listOutstandingSalaries);
+
+// ---------------- End-of-day close (each department submits; owner/managers see differences) ----------------
+const CLOSE_ROLES = { restaurant: ["restaurant", "manager"], bar: ["restaurant", "manager"], cashier: ["accountant", "manager"], reception: ["front_desk", "manager"] };
+const closeGate = (req, res, next) => {
+  const roles = CLOSE_ROLES[req.params.dept];
+  return roles ? requireRole(...roles)(req, res, next) : next(new (require("./utils/errors").ApiError)(400, "Unknown department."));
+};
+app.get("/api/daily-close/status", staff, requireRole("restaurant", "accountant", "front_desk", "manager"), dailyCloseController.status);
+app.get("/api/daily-close/lists", staff, requireRole("restaurant", "accountant", "front_desk", "manager"), dailyCloseController.lists);
+app.get("/api/daily-close/report", staff, requireRole("manager", "super_admin"), dailyCloseController.report);
+app.post("/api/daily-close/:dept", staff, rateLimit({ max: 30 }), closeGate, dailyCloseController.submit);
 
 app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 

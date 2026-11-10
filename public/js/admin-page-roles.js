@@ -49,6 +49,13 @@ window.ADMIN_PAGE_ROLES = {
   "manager",
   "accountant"
  ],
+ "/admin/daily-close.html": [
+  "super_admin",
+  "manager",
+  "restaurant",
+  "accountant",
+  "front_desk"
+ ],
  "/admin/dashboard.html": [
   "super_admin",
   "manager",
