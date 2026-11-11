@@ -23,6 +23,7 @@ const notificationController = require("./controllers/notificationController");
 const messageController = require("./controllers/messageController");
 const dailyCloseController = require("./controllers/dailyCloseController");
 const restaurantStockController = require("./controllers/restaurantStockController");
+const pushService = require("./services/pushService");
 
 const app = express();
 // Hides the "X-Powered-By: Express" header and disables Express's debug
@@ -201,6 +202,11 @@ app.get("/api/debts", staff, requireRole("manager", "accountant"), financeContro
 
 app.post("/api/salaries/pay", staff, requireRole("accountant", "manager"), financeController.paySalary);
 app.get("/api/salaries/outstanding", staff, requireRole("accountant", "manager", "hr"), financeController.listOutstandingSalaries);
+
+// ---------------- Phone alerts (Web Push) ----------------
+app.get("/api/push/key", staff, (req, res, next) => pushService.publicKey().then((k) => res.json({ key: k })).catch(next));
+app.post("/api/push/subscribe", staff, rateLimit({ max: 30 }), (req, res, next) => pushService.subscribe(req.user, (req.body || {}).subscription).then((r) => res.json(r)).catch(next));
+app.post("/api/push/unsubscribe", staff, (req, res, next) => pushService.unsubscribe((req.body || {}).endpoint).then((r) => res.json(r)).catch(next));
 
 // ---------------- Restaurant stock (registered by the restaurant department; owner sees everything) ----------------
 app.get("/api/restaurant/stock", staff, requireRole("restaurant", "accountant", "manager"), restaurantStockController.summary);

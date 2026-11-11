@@ -133,7 +133,7 @@
     setInterval(() => { if (!document.hidden) refresh(true); }, 15000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(true); });
     window.addEventListener("focus", () => refresh(true));
-    window.__refreshBell = () => refresh(false);
+    window.__refreshBell = (a) => refresh(Boolean(a));
   }
 
   /* ------------------------------------------------------------------ */
@@ -318,11 +318,55 @@
     });
   }
 
+  /* ---- Phone alerts: ask once, then keep this device subscribed ---- */
+  function pushSupported() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window; }
+  function b64(s) { const p = "=".repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(r, function (c) { return c.charCodeAt(0); }); }
+  async function pushSubscribe() {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) { const k = await api("/push/key"); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(k.key) }); }
+    await api("/push/subscribe", { method: "POST", body: { subscription: sub.toJSON() } });   // also refreshes who this device belongs to
+  }
+  async function enableAlerts() {
+    if (!pushSupported()) return { ok: false, why: "unsupported" };
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()) return { ok: false, why: "ios-install" };
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return { ok: false, why: perm };
+    try { await pushSubscribe(); return { ok: true }; } catch (e) { return { ok: false, why: "error", message: e.message }; }
+  }
+  window.AureliaAlerts = { enable: enableAlerts, supported: pushSupported, state: function () { return pushSupported() ? Notification.permission : "unsupported"; } };
+
+  function alertsBar() {
+    if (!pushSupported() || Notification.permission !== "default") return;
+    try { if (sessionStorage.getItem("aurelia_alerts_dismissed")) return; } catch (e) { /* ignore */ }
+    if (document.getElementById("alertsBar")) return;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone();
+    const bar = document.createElement("div");
+    bar.id = "alertsBar"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Phone alerts");
+    bar.style.cssText = "position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9998;max-width:460px;margin:0 auto;background:#163A30;color:#fff;border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 8px 28px rgba(0,0,0,.28);font:500 14px/1.35 Inter,system-ui,sans-serif";
+    bar.innerHTML = '<span style="flex:1">' + (ios ? "To get alerts on your iPhone, first tap Share → <b>Add to Home Screen</b>, then open Aurelia from there." : "Get an alert on this device whenever there is something new, even when the app is closed.") + '</span>' +
+      (ios ? "" : '<button type="button" id="alertsOn" style="background:#C79A5B;color:#163A30;border:0;border-radius:10px;padding:9px 14px;font-weight:700">Turn on</button>') +
+      '<button type="button" id="alertsX" aria-label="Not now" style="background:transparent;border:0;color:#fff;font-size:20px;line-height:1;padding:4px 6px">×</button>';
+    document.body.appendChild(bar);
+    bar.querySelector("#alertsX").onclick = function () { try { sessionStorage.setItem("aurelia_alerts_dismissed", "1"); } catch (e) { /* ignore */ } bar.remove(); };
+    const on = bar.querySelector("#alertsOn");
+    if (on) on.onclick = async function () {
+      const r = await enableAlerts();
+      bar.remove();
+      if (window.Utils && Utils.toast) Utils.toast(r.ok ? "Alerts are on for this device." : r.why === "denied" ? "Alerts are blocked. Allow notifications for this site in your browser settings." : "Could not turn on alerts here.", r.ok ? "success" : "error");
+    };
+  }
+  function keepSubscribed() {
+    if (!pushSupported() || Notification.permission !== "granted") return;
+    pushSubscribe().catch(function () { /* try again next visit */ });
+  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", function (e) { if (e.data && e.data.type === "aurelia-push" && window.__refreshBell) window.__refreshBell(true); });
+
   function boot() {
     appMeta();
     registerSW();
     if (window.Icons && window.Icons.hydrate) window.Icons.hydrate(document);
-    if (readSession()) { mountBell(); mountInstallPill(); publicHeader(); idleWatch(); }
+    if (readSession()) { mountBell(); mountInstallPill(); publicHeader(); idleWatch(); keepSubscribed(); setTimeout(alertsBar, 2500); }
     refreshInstallButtons();
     installFallback();
   }

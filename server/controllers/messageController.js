@@ -1,7 +1,7 @@
 const { db, FieldValue } = require("../config/firebase");
 const { ApiError } = require("../utils/errors");
 const { DEPARTMENTS } = require("../config/access");
-const { listManagers, getAccount } = require("../services/accountService");
+const { listManagers, getAccount, listTeamMembers } = require("../services/accountService");
 const { notify, toIso } = require("../services/notificationHub");
 
 /**
@@ -36,8 +36,11 @@ async function allowedRecipients(user) {
     const boss = mgrEntries.find((m) => m.key === `acct:${user.createdByAccount}`);
     return boss ? [boss] : [owner];
   }
-  if (user.role === "owner") return [...mgrEntries, ...mailboxes];
-  if (isManagerLike(user)) return [owner, ...mgrEntries, ...mailboxes];
+  // Team members: the owner can write to anyone; a manager only to the people she created.
+  const team = (await listTeamMembers()).filter((a) => a.status === "active" && (user.role === "owner" || a.createdByAccount === user.accountId))
+    .map((a) => ({ key: `acct:${a.id}`, label: `${a.fullName} (${a.staffRole || "Team member"})`, kind: "staff" }));
+  if (user.role === "owner") return [...mgrEntries, ...team, ...mailboxes];
+  if (isManagerLike(user)) return [owner, ...mgrEntries, ...team, ...mailboxes];
   // department staff / employees: only their managers
   const mine = mgrEntries.filter((m) => {
     const acct = managers.find((x) => `acct:${x.id}` === m.key);

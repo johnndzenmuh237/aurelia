@@ -335,6 +335,11 @@ async function listManagers() {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+async function listTeamMembers() {
+  const snap = await db.collection(ACCOUNTS).where("role", "==", "manager").get();
+  return snap.docs.map((d) => publicAccount({ id: d.id, ...d.data() })).filter((a) => a.tier === "staff");
+}
+
 async function updateManager(id, patch, actorKey) {
   const acct = await getAccount(id);
   if (!acct || acct.role !== "manager") throw new ApiError(404, "Manager not found.");
@@ -403,7 +408,7 @@ async function setStatus(id, active, actorKey) {
 }
 
 module.exports = {
-  cleanProfile, ID_TYPES, GENDERS, EMPLOYMENT_TYPES, SALARY_FREQUENCIES, PAY_METHODS,
+  listTeamMembers, cleanProfile, ID_TYPES, GENDERS, EMPLOYMENT_TYPES, SALARY_FREQUENCIES, PAY_METHODS,
   ACCOUNTS, publicAccount, createAccount, getAccount, findByIdentifier, login,
   changePassword, adminSetPassword, requestReset, confirmReset,
   listManagers, updateManager, setStatus, cleanDepartments, cleanPermissions, EMAIL_RE,

@@ -2,7 +2,7 @@
  * - Never touches /api/* or cross-origin requests (live business data is never cached).
  * - Pages: network first, falling back to the last copy, then /offline.html.
  * - Static assets: stale-while-revalidate. */
-const VERSION = "aurelia-v2";
+const VERSION = "aurelia-v3";
 const PRECACHE = ["/offline.html", "/css/style.css", "/css/admin.css", "/css/app.css", "/js/icons.js", "/js/app-core.js", "/js/auth.js", "/js/utils.js", "/js/config.js", "/icons/icon-192.png", "/favicon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -24,5 +24,27 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(caches.match(req).then((hit) => {
     const net = fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); } return res; }).catch(() => hit);
     return hit || net;
+  }));
+});
+
+/* ---- Phone alerts (Web Push) ---- */
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: "Aurelia", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+    // The app is open and in front: its bell already shows it, so don't show a second alert.
+    if (cs.some((c) => c.visibilityState === "visible" && c.focused)) { cs.forEach((c) => c.postMessage({ type: "aurelia-push" })); return; }
+    return self.registration.showNotification(d.title || "Aurelia", {
+      body: d.body || "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", tag: d.tag || "aurelia", renotify: true,
+      data: { url: d.url || "/portal/notifications.html" },
+    });
+  }));
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/portal/notifications.html";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+    for (const c of cs) { if ("focus" in c) { c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
   }));
 });

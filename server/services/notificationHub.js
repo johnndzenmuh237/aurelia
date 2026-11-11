@@ -69,6 +69,11 @@ async function notify({ title, message, type = "activity", dept, audienceKeys, a
       read: false,                           // kept for the legacy admin list page
       createdAt: FieldValue.serverTimestamp(),
     });
+    // Phone alert for everyone who may see it — fire and forget.
+    require("./pushService").pushNotification(ref.id, {
+      title: title || "", message: message || title || "", private: Boolean(isPrivate), senderKey: actorKey, senderName: actor?.name || "System",
+      link: link || null, audienceKeys: [...new Set(keys)],
+    }).catch(() => {});
     return ref.id;
   } catch (err) {
     // eslint-disable-next-line no-console

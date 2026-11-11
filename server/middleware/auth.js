@@ -4,7 +4,7 @@ const { ApiError } = require("../utils/errors");
 const { METHOD_PERMISSION } = require("../config/access");
 
 // Paths every signed-in person needs regardless of department permissions.
-const PERMISSION_EXEMPT = [/^\/api\/team/, /^\/api\/auth\//, /^\/api\/account\//, /^\/api\/messages/, /^\/api\/notifications/, /^\/api\/owner\//];
+const PERMISSION_EXEMPT = [/^\/api\/team/, /^\/api\/auth\//, /^\/api\/account\//, /^\/api\/messages/, /^\/api\/notifications/, /^\/api\/push\//, /^\/api\/owner\//];
 
 /**
  * Verifies the Bearer JWT and attaches req.user.
